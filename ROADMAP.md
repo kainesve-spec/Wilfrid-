@@ -10,13 +10,13 @@
 | 2 | **1 — Voix I/O** | Micro configurable, TTS ElevenLabs + cache, lecture | `IMPLEMENTED` (tests partiels) |
 | 3 | **2 — Wake-word** | Modèle Heed « Wilfrid », runtime continu (`core/wake/` validé P3 : 31/31, streaming mesuré, micro 16 kHz, ~17 ms/cycle), calibration et non-régression suivies | `IMPLEMENTED` + `TESTED` (runtime validé ; validation statistique du seuil repoussée à corpus élargi) |
 | 4 | **3 — Boucle d'assistance** | Écoute → compréhension → action → réponse, en français | `PLANNED` (prérequis posés : wake validé P3 + session P4 validée ; STT/dialogue/mémoire restants) |
-| 5 | **4 — Compétences/plugins** | Registre, manifeste, activation, isolation | `DESIGNED` → `PLANNED` |
+| 5 | **4 — Compétences/plugins** | Registre, manifeste, activation, isolation | Partiellement `PASS` (P7.1 : 4 capabilities R0–R2 ; registre général `PLANNED`) |
 | 6 | **5 — Mémoire** | Faits/préférences, persistance, oubli | `PLANNED` |
-| 7 | **6 — Connaissance** | Recherche locale puis web, citations | `PLANNED` |
-| 8 | **7 — Exécution contrôlée** | Outils typés, effets bornés et journalisés | `PLANNED` |
-| 9 | **8 — Vérification** | Preuves par bloc, non-régression systématique | `PLANNED` |
+| 7 | **6 — Connaissance** | Recherche locale puis web, citations | Partiellement `VALIDÉ` (P6.0–P6.6 locale ; web `PLANNED`) |
+| 8 | **7 — Exécution contrôlée** | Outils typés, effets bornés et journalisés | Partiellement `PASS` (P7.1 R0–R2 ; R3/R4 `PLANNED`) |
+| 9 | **8 — Vérification** | Preuves par bloc, non-régression systématique | Appliquée par bloc ; critic runtime `PLANNED` |
 | 10 | **9 — Apprentissage** | Retours d'usage, améliorations validées uniquement | `PLANNED` |
-| 11 | **10 — Gouvernance** | Permissions, scopes, audit, arrêt d'urgence | `DESIGNED` → `PLANNED` |
+| 11 | **10 — Gouvernance** | Permissions, scopes, audit, arrêt d'urgence | Partiellement `PASS` (P7.0-A + P7.1 ; mandats/baux P7.2 `DESIGNED` → `PLANNED`) |
 | 12 | **11 — Versions V1/V2/V3** | V1 voix+wake, V2 mémoire+connaissance, V3 autonomie gouvernée | `PLANNED` |
 | 13 | **12 — Revue d'autonomie** | Bilan, critères de réussite, clôture de cycle | `PLANNED` |
 

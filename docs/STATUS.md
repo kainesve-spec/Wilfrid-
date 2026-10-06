@@ -1,4 +1,4 @@
-# Wilfrid — STATUS (état réel après consolidation B1 du 2026-10-06)
+# Wilfrid — STATUS (état réel, sync P-COH.2 du 2026-10-06)
 
 | Bloc | État |
 |---|---|
@@ -15,6 +15,6 @@
 | Mémoire | non commencée |
 | Dialogue / cognition | non commencés |
 | Compétences/plugins | non commencés |
-| Phases 0-12 (MASTER_PLAN) | 0-1 partielles, 2 en cours (wake), 3-12 non commencées |
+| Phases 0-12 (MASTER_PLAN) | P0–P7.1 validés/PASS (preuves : VALIDATIONS.md) ; restent PLANNED : STT, TTS moteur, mémoire, dialogue, plugins tiers, V1–V3, revue 12 |
 
 Réserve attachée : THRESHOLD STREAMING : INCONCLUSIF (seuil 0.665 inchangé).

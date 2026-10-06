@@ -31,8 +31,7 @@ Aucune modification de code, modèle, seuil, données, dépendances.
    (référence 2026-10-06T00:38:29Z, 26.15s, EXIT 0).
 4. Dépendances : constater `pypdf==6.19.0`, `beautifulsoup4==4.15.0` via
    `.venv/bin/python -c` (sans installation), compatibles `requirements.txt`.
-5. Isolation P6/P7 : `grep P7/capability/plugin` dans `core/` = 0 ; seul
-   `docs/P7_0_A_DESIGN.md` comme artefact P7.
+5. Isolation P6/P7 : `grep P7/capability/plugin` dans `core/` = 0 au moment de la baseline ; artefacts P7 réels : `docs/P7_0_A_DESIGN.md`, `docs/P7_1_B3_APPROVAL.md`, `docs/P7_1_B4_PRE_IMPL_DIAGNOSTIC.md`, `docs/P7_1_B5_IMPLEMENTATION_SPEC.md`, `docs/P7_1_FINAL_AUDIT.md`, specs P7.2 (`MISSION_MODEL`, `R3_NET` historique, `CAPABILITY_AUTHORITY_DRAFT`, `CORE_TECHNICAL_SPEC`), `core/p7/` (12 modules), 5 suites `tests/test_p7_*.py`.
 
 ## Procédure P7.1 (consolidation documentaire du 2026-10-06)
 1. Tests C1 : `.venv/bin/python -m pytest tests/test_p7_foundations.py -q` — attendu 16/16.

@@ -10,10 +10,10 @@
 |---|---|---|
 | F-01 | Écoute micro et capture audio configurable (périphérique, taux) | `IMPLEMENTED` (`jarvis.py`) |
 | F-02 | Synthèse et lecture vocale (voix « Wilfrid ») | `IMPLEMENTED` (`wilfrid_voice.py`, cache) |
-| F-03 | Détection du mot d'éveil « Wilfrid » en continu | `DESIGNED` (modèle exporté ; runtime en audit) |
-| F-04 | Exécution d'actions (applications, fichiers, services) | `PLANNED` (hors accueil existant) |
-| F-05 | Compétences déclarées, versionnées, activables/désactivables | `DESIGNED` |
-| F-06 | Réponses en français, adaptées au contexte | `PLANNED` |
+| F-03 | Détection du mot d'éveil « Wilfrid » en continu | `VALIDÉ` (P3 runtime 31/31 ; réserve statistique seuil 0.665, sync P-COH.2) |
+| F-04 | Exécution d'actions (applications, fichiers, services) | Partiellement `PASS` (P7.1 R0–R2 locaux ; boucle complète + R3/R4 `PLANNED`, hors accueil existant) |
+| F-05 | Compétences déclarées, versionnées, activables/désactivables | Partiellement `PASS` (P7.1 : 4 capabilities ; registre général `PLANNED`) |
+| F-06 | Réponses en français, adaptées au contexte | Partiellement (P5 déclaratif local ; dialogue `PLANNED`) |
 
 ## 2. Exigences techniques
 
@@ -30,9 +30,9 @@
 | ID | Exigence | Statut |
 |---|---|---|
 | S-01 | Aucune clé/secret dans le dépôt | `IMPLEMENTED` (à maintenir à chaque revue) |
-| S-02 | Permissions explicites par compétence, portée minimale | `DESIGNED` |
+| S-02 | Permissions explicites par compétence, portée minimale | Partiellement `PASS` (P6 : 8 ids + registre P7 vide deny-by-default ; mandats/baux P7.2 `DESIGNED`) |
 | S-03 | Micro : activation visible, arrêt immédiat possible | `PLANNED` |
-| S-04 | Journal des actions à effet, consultable | `PLANNED` |
+| S-04 | Journal des actions à effet, consultable | Partiellement `PASS` (journaux append-only session/P6/P7 ; consultabilité applicative `PLANNED`) |
 
 ## 4. Extensibilité
 
@@ -54,23 +54,23 @@
 
 | ID | Exigence | Statut |
 |---|---|---|
-| R-01 | Intention explicite avant action | `PLANNED` |
-| R-02 | Incertitude exprimée plutôt que devinée | `PLANNED` |
-| R-03 | Traçabilité décision → preuve | `PLANNED` |
+| R-01 | Intention explicite avant action | Partiellement (P5 déclaratif ; exécution gouvernée `PLANNED` au-delà de P7.1) |
+| R-02 | Incertitude exprimée plutôt que devinée | Partiellement (`UNCERTAIN`/`CLARIFY` P5 ; généralisation `PLANNED`) |
+| R-03 | Traçabilité décision → preuve | Partiellement (chaîne P5→P7.1 prouvée ; preuve/audit P7.2 `DESIGNED`) |
 
 ## 7. Outils
 
 | ID | Exigence | Statut |
 |---|---|---|
-| O-01 | Catalogue d'outils typés, effets déclarés | `PLANNED` |
-| O-02 | Exécution bornée (timeout, périmètre, réversibilité) | `PLANNED` |
+| O-01 | Catalogue d'outils typés, effets déclarés | Partiellement `PASS` (catalogue P7.1 R0 ; généralisation `PLANNED`) |
+| O-02 | Exécution bornée (timeout, périmètre, réversibilité) | Partiellement `PASS` (P7.1 R0–R2 ; R3/R4 + env P7.2 `DESIGNED`) |
 
 ## 8. Vérification
 
 | ID | Exigence | Statut |
 |---|---|---|
-| V-01 | Chaque bloc : audit → diagnostic → patch → post-audit → test → validation | `DESIGNED` (voir `METHODOLOGIE.md`) |
-| V-02 | Non-régression mesurée avant clôture de bloc | `PLANNED` |
+| V-01 | Chaque bloc : audit → diagnostic → patch → post-audit → test → validation | Appliqué par bloc (`TESTED`, preuves par validation ; voir `METHODOLOGIE.md`) |
+| V-02 | Non-régression mesurée avant clôture de bloc | Appliquée par bloc (suites + SHAs ; pas de CI) |
 
 ## 9. Apprentissage
 

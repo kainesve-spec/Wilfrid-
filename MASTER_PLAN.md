@@ -43,15 +43,15 @@ gouvernance. Voir `ARCHITECTURE.md`.
 |---|---|---|
 | 0 | Fondations (repo, env, dépendances, outillage) | `IMPLEMENTED` |
 | 1 | Entrée/sortie vocale (micro, TTS) | `IMPLEMENTED` / partiellement `TESTED` |
-| 2 | Wake-word « Wilfrid » (modèle + runtime) | `DESIGNED`, modèle exporté, intégration en `AUDIT` |
+| 2 | Wake-word « Wilfrid » (modèle + runtime) | `VALIDÉ` (P3 runtime 31/31 ; réserve statistique seuil, sync P-COH.2) |
 | 3 | Boucle d'assistance (écoute → action → réponse) | `PLANNED` |
-| 4 | Système de compétences/plugins | `DESIGNED` (principe validé), `PLANNED` (implémentation) |
+| 4 | Système de compétences/plugins | Partiellement `PASS` (P7.1 : 4 capabilities R0–R2 ; principe validé, registre général `PLANNED`) |
 | 5 | Mémoire persistante (faits, préférences) | `PLANNED` |
-| 6 | Connaissance et recherche (locale + web) | `PLANNED` |
-| 7 | Outils et exécution contrôlée | `PLANNED` |
-| 8 | Vérification et preuves | `PLANNED` |
+| 6 | Connaissance et recherche (locale + web) | Partiellement `VALIDÉ` (P6.0–P6.6 locale ; web `PLANNED`) |
+| 7 | Outils et exécution contrôlée | Partiellement `PASS` (P7.1 R0–R2 ; R3/R4 + boucle `PLANNED`) |
+| 8 | Vérification et preuves | Appliquée par bloc (`TESTED`) ; critic/verifier runtime `PLANNED` |
 | 9 | Apprentissage et amélioration contrôlée | `PLANNED` |
-| 10 | Gouvernance et permissions | `DESIGNED`, `PLANNED` |
+| 10 | Gouvernance et permissions | Partiellement `PASS` (P7.0-A `DESIGNED`, registre/gouverneur P7.1 ; mandats/baux P7.2 `DESIGNED`) |
 | 11 | Versions V1/V2/V3 et durcissement | `PLANNED` |
 | 12 | Revue d'autonomie et clôture de cycle | `PLANNED` |
 

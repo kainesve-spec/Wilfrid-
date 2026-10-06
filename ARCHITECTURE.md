@@ -23,16 +23,16 @@
 | Voix | Synthèse ElevenLabs, voix dédiée | `IMPLEMENTED` |
 | Dialogue | Tours de parole, contexte conversationnel, français | `PLANNED` |
 | Session et interaction (P4) | Session locale unique, machine IDLE→…→IDLE, contexte volatil borné+purgé, événements minimaux, identité Wilfrid/Monsieur K, salut date-seule, journal OFF ; sans STT/TTS/mémoire/action | `VALIDÉ` (54/54 avec P1-P3 ; seuil et modèles intacts) |
-| Compréhension | Intentions, entités, désambiguïsation | `PLANNED` |
-| Décision | Plan d'action, choix de compétence, arbitrage | `PLANNED` |
+| Compréhension | Intentions, entités, désambiguïsation | Partiellement `VALIDÉ` (P5 déclaratif local, voir ligne Cognition ; dialogue/mémoire `PLANNED`) |
+| Décision | Plan d'action, choix de compétence, arbitrage | Partiellement `VALIDÉ` (P5 décideur/planner abstrait ; arbitrage avec effets `PLANNED`) |
 | Cognition (P5) | Compréhension/décision structurée sans effets : taxonomie 8 kinds, classifieur déterministe local, décideur, planner abstrait (`core/cognitive/`, `NEED_ACTION` déclaratif, zéro exécution) | `VALIDÉ` (41/41, cumul 95/95) |
-| Compétences/plugins | Capacités déclarées/versionnées (cœur de l'extensibilité) | `DESIGNED` |
+| Compétences/plugins | Capacités déclarées/versionnées (cœur de l'extensibilité) | Partiellement `PASS` (P7.1 : 4 capabilities R0–R2 ; registre général `PLANNED`) |
 | Mémoire | Faits, préférences, historique ; oubli sur demande | `PLANNED` |
-| Connaissance/recherche | Locale d'abord, web ensuite, sources citées | `PLANNED` |
-| Outils et exécution | Effets bornés, journalisés, réversibles | `PLANNED` (accueil existant hors gouvernance) |
-| Vérification | Tests, preuves, non-régression par bloc | `DESIGNED` |
+| Connaissance/recherche | Locale d'abord, web ensuite, sources citées | Partiellement `VALIDÉ` (P6.0–P6.6 locale 105/105 ; web `PLANNED`) |
+| Outils et exécution | Effets bornés, journalisés, réversibles | Partiellement `PASS` (P7.1 R0–R2 ; R3/R4 et boucle complète `PLANNED`, accueil existant hors gouvernance) |
+| Vérification | Tests, preuves, non-régression par bloc | Appliquée par bloc (`TESTED`, preuves par validation) ; pas de critic/verifier runtime |
 | Apprentissage | Retours d'usage, ajustements validés uniquement | `PLANNED` |
-| Gouvernance | Permissions, scopes, audit des effets | `DESIGNED` |
+| Gouvernance | Permissions, scopes, audit des effets | Partiellement `PASS` (P7.0-A `DESIGNED`, registre/gouverneur P7.1 ; mandats/baux P7.2 `DESIGNED`) |
 
 ## Contrats entre moteurs
 
