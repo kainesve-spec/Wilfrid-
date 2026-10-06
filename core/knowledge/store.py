@@ -146,6 +146,27 @@ class KnowledgeStore:
             "SELECT status FROM documents WHERE id=?", (doc_id,)).fetchone()
         return row["status"] if row else None
 
+    def list_documents(self) -> List[Dict[str, Any]]:
+        """Énumération lecture seule des ouvrages (ordre stable par id).
+
+        Ajout O2 : l'abstraction n'offrait aucune énumération ; la sélection
+        de source l'exige. Aucun schéma modifié, aucune écriture.
+        """
+        rows = self._conn.execute(
+            "SELECT d.id AS id, d.source_id AS source_id, s.domain AS source,"
+            " d.title AS title, d.status AS status,"
+            " d.acquired_at AS acquired_at FROM documents d"
+            " LEFT JOIN sources s ON s.id = d.source_id"
+            " ORDER BY d.id").fetchall()
+        return [dict(r) for r in rows]
+
+    def chunk_document(self, chunk_id: str) -> Optional[str]:
+        """Document parent d'un chunk (lecture seule, ajout O2)."""
+        row = self._conn.execute(
+            "SELECT document_id FROM chunks WHERE id=?",
+            (chunk_id,)).fetchone()
+        return str(row["document_id"]) if row else None
+
     def set_document_status(self, doc_id: str, status: str) -> None:
         with self._conn:
             cur = self._conn.execute(
