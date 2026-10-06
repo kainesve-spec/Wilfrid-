@@ -212,7 +212,7 @@ def test_closed_module_set_and_no_authority_imports():
     assert names == {"__init__.py", "types.py", "errors.py", "registry.py",
                      "journal.py", "lifecycle.py", "governor.py",
                      "catalog.py", "resolver.py", "reader.py", "writer.py",
-                     "notify.py", "invoke.py"}, names
+                     "notify.py", "invoke.py", "audit.py"}, names
     banned = {"socket", "subprocess", "webbrowser", "os", "sys", "sqlite3",
               "requests", "urllib", "ftplib", "httpx", "shutil", "pty", "signal"}
     for path in Path(p7pkg.__file__).parent.glob("*.py"):
