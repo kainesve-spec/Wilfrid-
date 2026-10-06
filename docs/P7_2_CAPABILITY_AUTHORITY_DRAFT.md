@@ -170,6 +170,18 @@ silence = refus ; proposeur/décideur séparés.
 - O9 ordres TAIOS R3/R4 : classification + plafonds ; validation : OUI.
 - O10 schémas non-HTTP : homologation dédiée ; validation : OUI si besoin.
 
+## Correspondance B3 ↔ D11/O7 (descriptive et traçable, P-COH.3 — sans normativité nouvelle)
+D11 n'existe dans le dépôt que par références (concept de mandat) ; la présente
+table ne reconstitue pas son contenu au-delà de ces références. O7 reste ouvert.
+| Axe | B3 (P7.1 — DÉCIDÉ v1, implémenté, 279/279 PASS) | D11/O7 (P7.2 — conçu, non implémenté) | Articulation |
+|---|---|---|---|
+| Objet | Approbation par acte R0–R2 : 4 fiches, bornes, jail + canal fixés | Mandat structuré (D11) + rituel R3 à valider (O7) | B3 = cas particulier opéré ; D11/O7 = généralisation non implémentée |
+| Autorité | Monsieur K explicite, datée, versionnée | Idem + versionnage du mandat | Commun : décision humaine explicite |
+| Effet | Règle fondamentale : n'active rien, registre vide, 0 active | À tenir : approbation ≠ activation | Commun, reconduit |
+| Registre | Vide, sans API d'activation | Baux V2 futurs (aucun n'existe) | Différent : ne pas conclure un mandat implémenté |
+| Modèle | Rituel par acte unique | Interface multi-modèles, ACTE_PAR_ACTE non imposé | B3 est UN modèle ; O7 ouvert avant tout R3 |
+| Traçabilité | Chaîne proposition→décision→périmètre→état ; silence = refus | Reconduite et étendue au mandat | Commun |
+
 ## Tableau de statut
 | Élément | Statut |
 |---|---|

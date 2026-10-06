@@ -8,6 +8,12 @@
 > (S-02, S-04, F-05, X-01/X-02/X-03, O-01/O-02), `METHODOLOGIE.md`, `docs/DECISIONS.md`.
 > P1–P5 validés. P6.0–P6.6 déclarés terminés par le commanditaire (200/200 PASS, P6.6 POST-AUDIT PASS)
 > — pris comme hypothèse d'entrée, non ré-audités ici.
+>
+> **Annotation P-COH.3 (2026-10-06, historique inchangé) :** ci-dessus = ÉTAT AU
+> MOMENT DE LA CONCEPTION (hypothèse d'entrée, sans preuve propre).
+> ÉTAT CONSTATÉ APRÈS VALIDATION : preuves réelles dans `docs/POST_AUDIT_P6_6.md`
+> (SHA256, 105/105 P6, 200/200 cumulés) et `docs/VALIDATIONS.md`. Lire les deux
+> niveaux sans les confondre.
 
 ## 0. Principes directeurs (rappels inviolables)
 

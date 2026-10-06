@@ -4,6 +4,12 @@
 > `docs/P7_2_MISSION_MODEL_SPEC.md` (missions longue durée, READY FOR REVIEW).
 > Conservée sans autre modification comme historique (révision P7.2 du 2026-10-06 :
 > retrait de la borne ≤10 min, non validée comme règle fondamentale).
+> Clarification P-COH.3 : le corps ci-dessous N'EST PLUS NORMATIF (y compris
+> durées, allowlist exhaustive, mentions « R4 interdit » / « R3 EXEC hors
+> périmètre », qui reflètent l'état de la réflexion d'alors, pas des règles
+> universelles actuelles). Règles actuelles : D1–D21, S1–S8 et specs P7.2 en
+> vigueur. Aucune politique réseau/DNS/TLS de production n'est créée ici ;
+> O7 reste ouvert ; R3 non commencé.
 > Statut d'origine : PROPOSÉ — EN ATTENTE D'APPROBATION DE MONSIEUR K.
 > Contexte : P7.1 PASS, post-audit PASS, documentation PASS, 279/279,
 > registre ACTIVE=0/DECLARED=0, diagnostic P7.2 DESIGN READY FOR REVIEW,
