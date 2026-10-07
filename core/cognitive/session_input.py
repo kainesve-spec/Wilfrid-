@@ -54,7 +54,8 @@ def select_user_text(turns: Any) -> Optional[str]:
 
 def run_turn(turns: Any, session_id: Any, now: Any, source: Any, *,
              skill_id: str = "wilfrid-core", skill_version: str = "1.0",
-             request_id: str = "") -> TurnResult:
+             request_id: str = "",
+             stt_confidence: Optional[float] = None) -> TurnResult:
     """Exécute la chaîne complète tour → intention → demande typée."""
     if not isinstance(session_id, str) or not session_id:
         return TurnResult("NO_ROUTE", "", None, None, "invalid-session-id")
@@ -62,6 +63,11 @@ def run_turn(turns: Any, session_id: Any, now: Any, source: Any, *,
         return TurnResult("NO_ROUTE", "", None, None, "invalid-source")
     if not isinstance(now, (int, float)) or now != now:
         return TurnResult("NO_ROUTE", "", None, None, "invalid-timestamp")
+    if stt_confidence is not None and (
+            not isinstance(stt_confidence, (int, float))
+            or isinstance(stt_confidence, bool)
+            or not 0.0 <= float(stt_confidence) <= 1.0):
+        return TurnResult("NO_ROUTE", "", None, None, "invalid-stt-confidence")
     text = select_user_text(turns)
     if text is None:
         return TurnResult("NO_ROUTE", "", None, None, "no-usable-user-turn")
@@ -69,7 +75,8 @@ def run_turn(turns: Any, session_id: Any, now: Any, source: Any, *,
                 if isinstance(t, dict)]
     try:
         core = CognitiveCore()
-        result = core.process(text, session_id, snapshot, float(now), source)
+        result = core.process(text, session_id, snapshot, float(now), source,
+                              stt_confidence=stt_confidence)
     except (ValueError, TypeError) as exc:
         return TurnResult("NO_ROUTE", text, None, None,
                           f"cognitive-error:{type(exc).__name__}")

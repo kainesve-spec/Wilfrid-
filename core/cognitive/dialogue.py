@@ -94,7 +94,9 @@ def _ack_text(kind: str, uncertainty: str, answer: str) -> str:
 def respond(state: Any, text: Any, *, session_id: Any, now: Any,
             source: Any, search_fn: Optional[Callable] = None,
             skill_id: str = "wilfrid-core",
-            skill_version: str = "1.0") -> Tuple[DialogueState, DialogueResponse]:
+            skill_version: str = "1.0",
+            stt_confidence: Optional[float] = None
+            ) -> Tuple[DialogueState, DialogueResponse]:
     """Un tour complet : interprétation → décision → réponse → contexte."""
     if not isinstance(state, DialogueState):
         state = DialogueState()
@@ -111,7 +113,8 @@ def respond(state: Any, text: Any, *, session_id: Any, now: Any,
     try:
         turn_result = run_turn(
             [dict(turn) for turn in history], session_id, now, source,
-            skill_id=skill_id, skill_version=skill_version, request_id=rid)
+            skill_id=skill_id, skill_version=skill_version, request_id=rid,
+            stt_confidence=stt_confidence)
     except Exception:
         response = DialogueResponse(kind="ERROR", text="Erreur technique.")
         return DialogueState(history=history, pending=None,
