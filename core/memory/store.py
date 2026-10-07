@@ -20,7 +20,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-KINDS = ("fact", "preference", "note")
+KINDS = ("fact", "preference", "note", "event", "decision_record",
+           "mission_state", "task_state", "observation", "reference",
+           "procedural", "ephemeral")
 STATUSES = ("active", "invalidated", "expired", "deleted")
 FRESHNESS = ("CURRENT", "OLD", "EXPIRED", "UNKNOWN")
 
@@ -296,10 +298,17 @@ class MemoryStore:
         return True, "ok"
 
     def list_active(self, kind: str = "",
-                    limit: int = 100) -> List[Dict[str, Any]]:
-        """Enregistrements actifs, ordre stable (reprise déterministe)."""
-        sql = "SELECT * FROM memories WHERE status='active'"
-        params: List[Any] = []
+                    limit: int = 100,
+                    statuses: Tuple[str, ...] = ("active",)
+                    ) -> List[Dict[str, Any]]:
+        """Enregistrements par statuts (défaut : actifs), ordre stable."""
+        wanted = tuple(s for s in statuses
+                       if s in ("active", "invalidated", "expired", "deleted"))
+        if not wanted:
+            return []
+        marks = ",".join("?" for _ in wanted)
+        sql = f"SELECT * FROM memories WHERE status IN ({marks})"
+        params: List[Any] = list(wanted)
         if kind:
             if kind not in KINDS:
                 return []
