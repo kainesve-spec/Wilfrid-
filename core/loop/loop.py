@@ -23,6 +23,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from core.cognitive.dialogue import DialogueResponse, DialogueState, respond
 from core.cognitive.dialogue import PendingConfirmation
 from core.memory.continuity import record_turn
+from core.memory.policy import classify as classify_memory
 from core.p7.approval_gate import ApprovalGate, demand_fingerprint
 from core.p7.invoke import invoke
 from core.p7.mandate import MandateRegistry
@@ -205,17 +206,27 @@ def verify_effect(permission_id: Any, request: Any, result: Any,
 
 def _memorize_turns(memory: Any, session_id: Any, turn_index: Any,
                     user_text: str, response_text: str) -> bool:
+    """Consigne explicite via la politique mémoire (AUTO seul)."""
     if memory is None:
         return True
     try:
         base = f"dlg-{session_id}-{turn_index}"
-        ok_user, _ = record_turn(memory, f"{base}-user", "user", user_text,
-                                 session_id=str(session_id))
-        ok_wilfrid, _ = record_turn(memory, f"{base}-wilfrid", "wilfrid",
-                                    response_text, session_id=str(session_id))
+        ok_user, _ = _store_note(memory, f"{base}-user", "user", user_text,
+                                 session_id)
+        ok_wilfrid, _ = _store_note(memory, f"{base}-wilfrid", "wilfrid",
+                                    response_text, session_id)
         return bool(ok_user and ok_wilfrid)
     except Exception:
         return False
+
+
+def _store_note(memory: Any, record_id: str, role: str, text: str,
+                session_id: Any) -> Tuple[bool, str]:
+    verdict, _ = classify_memory("note", text)
+    if verdict != "AUTO":
+        return True, "non-memorise-politique"
+    return record_turn(memory, record_id, role, text,
+                       session_id=str(session_id))
 
 
 def _execute_r2(registry: Any, mandate_id: str, shaped: Any,
