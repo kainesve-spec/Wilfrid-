@@ -25,6 +25,7 @@ from core.cognitive.dialogue import PendingConfirmation
 from core.memory.continuity import record_turn
 from core.p7.approval_gate import ApprovalGate, demand_fingerprint
 from core.p7.invoke import invoke
+from core.p7.mandate import MandateRegistry
 from core.p7.notify import expected_target
 from core.p7.resolver import jail_root, resolve as resolve_path
 from core.p7.types import Approval, MAX_DURATION_S, MAX_LIMITS, Request
@@ -33,9 +34,18 @@ LOOP_KINDS = (
     "RESPONDED",
     "CONFIRM_CREATED",
     "CONFIRM_RESOLVED",
+    "EXECUTED",
+    "DEFERRED",
     "REFUSED",
     "ERROR",
 )
+
+_R2_OPERATIONS = {
+    "P7.CATALOG_READ": "read",
+    "P7.JAIL_READ": "read",
+    "P7.JAIL_WRITE_REVERSIBLE": "write",
+    "P7.NOTIFY_LOCAL": "notify",
+}
 
 VERIFICATIONS = ("VERIFIED_SUCCESS", "FAILED", "UNCERTAIN", "")
 
@@ -208,13 +218,88 @@ def _memorize_turns(memory: Any, session_id: Any, turn_index: Any,
         return False
 
 
+def _execute_r2(registry: Any, mandate_id: str, shaped: Any,
+                session_id: Any, now: Any, journal: Any, payload: Any,
+                catalog: Any, memory: Any, memorize: bool,
+                turn_index: Any) -> LoopResult:
+    """Exécute une demande sous mandat : re-vérifie, invoque, vérifie.
+
+    L'autorisation est re-lue au moment de l'acte (TOCTOU) ; l'artefact est
+    lié à la demande exacte et consommé immédiatement (jamais stocké,
+    jamais réutilisé).
+    """
+    ok, artefact = registry.authorize_execution(
+        mandate_id, capability=shaped.permission_id,
+        resource=shaped.target,
+        operation=_R2_OPERATIONS.get(shaped.permission_id, ""),
+        params=dict(shaped.limits)
+        if isinstance(shaped.limits, dict) else {},
+        context={"session_id": str(session_id)},
+        request_id=shaped.request_id, now=now)
+    if not ok:
+        return LoopResult(kind="REFUSED", request_id=shaped.request_id,
+                          detail="autorisation-r2-refusee")
+    duration = shaped.duration_s \
+        if isinstance(getattr(shaped, "duration_s", 0), int) \
+        and not isinstance(getattr(shaped, "duration_s", 0), bool) \
+        and shaped.duration_s > 0 else 0
+    approval = Approval(
+        request_id=shaped.request_id, permission_id=shaped.permission_id,
+        decision="accorde", scope=shaped.scope, duration_s=duration,
+        reason=f"mandate:{artefact.mandate_id}",
+        capability_version=artefact.version, timestamp=float(now)
+        if isinstance(now, (int, float)) else 0.0)
+    invoked = invoke(permission_id=shaped.permission_id, request=shaped,
+                     approval=approval, now=now, journal=journal,
+                     payload=payload, catalog=catalog)
+    if invoked.decision is None or not invoked.decision.allowed:
+        return LoopResult(kind="REFUSED", request_id=shaped.request_id,
+                          detail="gouverneur-refuse")
+    verification = verify_effect(shaped.permission_id, shaped,
+                                 invoked.result, payload)
+    memory_ok = True
+    if memorize and memory is not None:
+        memory_ok = _memorize_turns(
+            memory, session_id, turn_index,
+            f"effet {shaped.permission_id} {verification} (mandat"
+            f" {artefact.mandate_id})", f"resultat: {verification}")
+    return LoopResult(kind="EXECUTED", request_id=shaped.request_id,
+                      verification=verification, memory_ok=memory_ok,
+                      detail=verification)
+
+
+def _evaluate_r2(registry: Any, shaped: Any, session_id: Any,
+                 request_id: str, now: Any) -> Tuple[str, str, str]:
+    """Cherche un mandat couvrant exact (ids triés, déterministe)."""
+    if not isinstance(registry, MandateRegistry):
+        return "REQUIRE_CONFIRMATION", "", "sans-registre"
+    operation = _R2_OPERATIONS.get(shaped.permission_id)
+    if operation is None:
+        return "REQUIRE_CONFIRMATION", "", "hors-mandat"
+    params = dict(shaped.limits) if isinstance(shaped.limits, dict) else {}
+    context = {"session_id": str(session_id)}
+    for mandate_id in registry.mandate_ids():
+        decision = registry.evaluate(
+            mandate_id, capability=shaped.permission_id,
+            resource=shaped.target, operation=operation, params=params,
+            context=context, request_id=request_id, now=now)
+        if decision.decision == "ALLOW_R2":
+            return "ALLOW_R2", mandate_id, "couvert"
+        if decision.decision == "DEFER":
+            return "DEFER", mandate_id, decision.reason
+    return "REQUIRE_CONFIRMATION", "", "sans-mandat-couvrant"
+
+
 def run_text_turn(state: Any, gate: Any, text: Any, *, session_id: Any,
                   now: Any, source: str = "text", search_fn: Any = None,
                   memory: Any = None, memorize: bool = False,
                   skill_id: str = "wilfrid-core",
                   skill_version: str = "1.0",
                   expires_at: Any = None,
-                  router_fn: Any = None) -> Tuple[DialogueState, LoopResult]:
+                  router_fn: Any = None,
+                  mandates: Any = None, journal: Any = None,
+                  payload: Any = None,
+                  catalog: Any = None) -> Tuple[DialogueState, LoopResult]:
     """Un tour : dialogue → éventuelle demande PENDING → réponse + mémoire.
 
     `router_fn` optionnel (interprétation/routage uniquement) : si le dialogue
@@ -243,6 +328,24 @@ def run_text_turn(state: Any, gate: Any, text: Any, *, session_id: Any,
                         "utf-8")).hexdigest()[:12]
                 shaped = _router_request(routed, rid)
                 if shaped is not None:
+                    if mandates is not None:
+                        outcome, mandate_id, why = _evaluate_r2(
+                            mandates, shaped, session_id, rid, now)
+                        if outcome == "ALLOW_R2":
+                            if journal is None:
+                                return new_state, LoopResult(
+                                    kind="ERROR", response=response,
+                                    request_id=rid, memory_ok=memory_ok,
+                                    detail="journal-requis-r2")
+                            return new_state, _execute_r2(
+                                mandates, mandate_id, shaped, session_id,
+                                now, journal, payload, catalog, memory,
+                                memorize, new_state.turn_index)
+                        if outcome == "DEFER":
+                            return new_state, LoopResult(
+                                kind="DEFERRED", response=response,
+                                request_id=rid, memory_ok=memory_ok,
+                                detail=why)
                     pending = _router_pending(shaped)
                     response = DialogueResponse(
                         kind="REQUIRE_CONFIRMATION",
