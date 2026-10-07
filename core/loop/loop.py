@@ -310,7 +310,9 @@ def run_text_turn(state: Any, gate: Any, text: Any, *, session_id: Any,
                   router_fn: Any = None,
                   mandates: Any = None, journal: Any = None,
                   payload: Any = None,
-                  catalog: Any = None) -> Tuple[DialogueState, LoopResult]:
+                  catalog: Any = None,
+                  stt_confidence: Any = None
+                  ) -> Tuple[DialogueState, LoopResult]:
     """Un tour : dialogue → éventuelle demande PENDING → réponse + mémoire.
 
     `router_fn` optionnel (interprétation/routage uniquement) : si le dialogue
@@ -320,7 +322,8 @@ def run_text_turn(state: Any, gate: Any, text: Any, *, session_id: Any,
     """
     new_state, response = respond(
         state, text, session_id=session_id, now=now, source=source,
-        search_fn=search_fn, skill_id=skill_id, skill_version=skill_version)
+        search_fn=search_fn, skill_id=skill_id, skill_version=skill_version,
+        stt_confidence=stt_confidence)
     memory_ok = True
     if memorize and memory is not None and isinstance(text, str) \
             and text.strip():

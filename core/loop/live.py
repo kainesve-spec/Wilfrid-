@@ -127,7 +127,8 @@ def submit_turn(live: Any, gate: Any, text: Any, *, now: Any,
                 skill_id: str = "wilfrid-core",
                 skill_version: str = "1.0",
                 expires_at: Any = None,
-                session_id: Any = None) -> Tuple[Any, LoopResult]:
+                session_id: Any = None,
+                stt_confidence: Any = None) -> Tuple[Any, LoopResult]:
     """Un tour dans une session vivante. États fermés, zéro effet direct."""
     if not isinstance(live, LiveSession):
         return live, LoopResult(kind="ERROR", detail="session-invalide")
@@ -153,7 +154,8 @@ def submit_turn(live: Any, gate: Any, text: Any, *, now: Any,
             search_fn=search_fn, memory=memory, memorize=memorize,
             skill_id=skill_id, skill_version=skill_version,
             expires_at=expires_at, router_fn=router_fn, mandates=mandates,
-            journal=journal, payload=payload, catalog=catalog)
+            journal=journal, payload=payload, catalog=catalog,
+            stt_confidence=stt_confidence)
     except Exception:
         errored = LiveSession(id=live.id, state="ERROR",
                               dialogue=live.dialogue, pending=None,
