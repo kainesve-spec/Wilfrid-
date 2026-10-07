@@ -21,12 +21,13 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from core.cognitive.dialogue import DialogueResponse, DialogueState, respond
+from core.cognitive.dialogue import PendingConfirmation
 from core.memory.continuity import record_turn
 from core.p7.approval_gate import ApprovalGate, demand_fingerprint
 from core.p7.invoke import invoke
 from core.p7.notify import expected_target
-from core.p7.resolver import resolve as resolve_path
-from core.p7.types import Approval
+from core.p7.resolver import jail_root, resolve as resolve_path
+from core.p7.types import Approval, MAX_DURATION_S, MAX_LIMITS, Request
 
 LOOP_KINDS = (
     "RESPONDED",
@@ -72,6 +73,52 @@ def _demand_fp(request: Any, context_hash: str) -> str:
         context_hash=context_hash)
 
 
+def _router_request(route: Any, request_id: str) -> Optional[Request]:
+    """Construit une vraie Request depuis un RouteResult MATCH, ou None.
+
+    Cibles confinées uniquement (resolver) : tout échec retombe sur le
+    chemin dialogue existant, jamais de demande fabriquée.
+    """
+    from core.p7.catalog import scope_for
+
+    capability_id = getattr(route, "capability_id", "")
+    params = getattr(route, "params", None)
+    if capability_id not in MAX_LIMITS or not isinstance(params, dict):
+        return None
+    if capability_id == "P7.CATALOG_READ":
+        scope, target = scope_for(capability_id), capability_id
+    elif capability_id in ("P7.JAIL_READ", "P7.JAIL_WRITE_REVERSIBLE"):
+        filename = params.get("filename", "")
+        if not isinstance(filename, str) or not filename:
+            return None
+        target = str(jail_root() / filename)
+        scope = (f"fichier:{target}:lecture-seule"
+                 if capability_id == "P7.JAIL_READ"
+                 else f"fichier:{target}:écriture-réversible-bornée")
+        ok, _, _ = resolve_path(scope, target)
+        if not ok:
+            return None
+    elif capability_id == "P7.NOTIFY_LOCAL":
+        target = expected_target(request_id)
+        scope = f"notification:{target}:textuel-borné"
+        ok, _, _ = resolve_path(scope, target)
+        if not ok:
+            return None
+    else:
+        return None
+    return Request(
+        request_id=request_id, skill_id="wilfrid-core", skill_version="1.0",
+        permission_id=capability_id, scope=scope, target=target,
+        limits=dict(MAX_LIMITS[capability_id]),
+        duration_s=int(MAX_DURATION_S.get(capability_id, 0)),
+        reason="routeur-intention")
+
+
+def _router_pending(request: Any) -> PendingConfirmation:
+    return PendingConfirmation(
+        request_id=request.request_id, permission_id=request.permission_id,
+        scope=request.scope, target=request.target,
+        reason="routeur-intention")
 def request_confirmation(gate: Any, request: Any, session_id: Any,
                          turn_index: Any, now: Any,
                          expires_at: Any = None) -> Tuple[bool, str]:
@@ -166,8 +213,15 @@ def run_text_turn(state: Any, gate: Any, text: Any, *, session_id: Any,
                   memory: Any = None, memorize: bool = False,
                   skill_id: str = "wilfrid-core",
                   skill_version: str = "1.0",
-                  expires_at: Any = None) -> Tuple[DialogueState, LoopResult]:
-    """Un tour : dialogue → éventuelle demande PENDING → réponse + mémoire."""
+                  expires_at: Any = None,
+                  router_fn: Any = None) -> Tuple[DialogueState, LoopResult]:
+    """Un tour : dialogue → éventuelle demande PENDING → réponse + mémoire.
+
+    `router_fn` optionnel (interprétation/routage uniquement) : si le dialogue
+    ne produit pas déjà REQUIRE_CONFIRMATION et que le routeur retourne un
+    MATCH complet, la demande est créée via le même Approval Gate. Sinon le
+    chemin dialogue existant s'applique, inchangé.
+    """
     new_state, response = respond(
         state, text, session_id=session_id, now=now, source=source,
         search_fn=search_fn, skill_id=skill_id, skill_version=skill_version)
@@ -178,10 +232,59 @@ def run_text_turn(state: Any, gate: Any, text: Any, *, session_id: Any,
                                     new_state.turn_index, text.strip(),
                                     response.text)
     if response.kind != "REQUIRE_CONFIRMATION" or response.pending is None:
+        if router_fn is not None and isinstance(text, str) and text.strip():
+            try:
+                routed = router_fn(text)
+            except Exception:
+                routed = None
+            if routed is not None and getattr(routed, "status", "") == "MATCH":
+                rid = "rt-" + hashlib.sha256(
+                    f"{session_id}|{new_state.turn_index}|{text}".encode(
+                        "utf-8")).hexdigest()[:12]
+                shaped = _router_request(routed, rid)
+                if shaped is not None:
+                    pending = _router_pending(shaped)
+                    response = DialogueResponse(
+                        kind="REQUIRE_CONFIRMATION",
+                        text="Confirmation requise : "
+                             f"{shaped.permission_id} sur {shaped.target}.",
+                        pending=pending)
+                    created_state, created = _confirm_created(
+                        gate, new_state, response, shaped, session_id, now,
+                        memory_ok, memory, expires_at)
+                    if created.kind == "CONFIRM_CREATED":
+                        created = LoopResult(
+                            kind=created.kind, response=created.response,
+                            request_id=created.request_id,
+                            confirmation_id=created.confirmation_id,
+                            verification=created.verification,
+                            memory_ok=created.memory_ok,
+                            detail=created.detail, request=shaped)
+                    return created_state, created
         kind = "RESPONDED" if response.kind != "ERROR" else "ERROR"
         return new_state, LoopResult(
             kind=kind, response=response, memory_ok=memory_ok,
             detail=response.kind)
+def _confirm_created(gate: Any, new_state: DialogueState,
+                     response: DialogueResponse, shaped: Any,
+                     session_id: Any, now: Any, memory_ok: bool,
+                     memory: Any, expires_at: Any) -> Tuple[DialogueState, LoopResult]:
+    """Crée la demande PENDING via l'Approval Gate. Sans effet."""
+    ok, confirmation_id = request_confirmation(
+        gate, shaped, session_id, new_state.turn_index, now,
+        expires_at=expires_at)
+    if not ok:
+        return new_state, LoopResult(
+            kind="ERROR", response=response, memory_ok=memory_ok,
+            detail=str(confirmation_id))
+    return new_state, LoopResult(
+        kind="CONFIRM_CREATED", response=response,
+        request_id=shaped.request_id,
+        confirmation_id=str(confirmation_id), memory_ok=memory_ok,
+        detail="pending")
+
+
+    # Chemin dialogue historique (P7.1 PASS, inchangé) : pending existant.
     pending = response.pending
     request_id = getattr(pending, "request_id", "")
     scope = getattr(pending, "scope", "")
@@ -196,17 +299,8 @@ def run_text_turn(state: Any, gate: Any, text: Any, *, session_id: Any,
     shaped.scope = scope
     shaped.target = target
     shaped.limits = {}
-    ok, confirmation_id = request_confirmation(
-        gate, shaped, session_id, new_state.turn_index, now,
-        expires_at=expires_at)
-    if not ok:
-        return new_state, LoopResult(
-            kind="ERROR", response=response, memory_ok=memory_ok,
-            detail=str(confirmation_id))
-    return new_state, LoopResult(
-        kind="CONFIRM_CREATED", response=response, request_id=request_id,
-        confirmation_id=str(confirmation_id), memory_ok=memory_ok,
-        detail="pending")
+    return _confirm_created(gate, new_state, response, shaped, session_id,
+                            now, memory_ok, memory, expires_at)
 
 
 def resolve_confirmation(gate: Any, confirmation_id: Any, decision: Any,
