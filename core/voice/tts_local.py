@@ -185,8 +185,10 @@ def _split_clauses(text: str) -> List[str]:
     return clauses
 
 
-def _load_id_map(model_path: str, tokens_path: str) -> Dict[str, List[int]]:
+def _load_voice(model_path: str,
+                tokens_path: str) -> Tuple[Dict[str, List[int]], int]:
     found = None
+    rate = TTS_RATE_NATIVE
     candidates = [model_path + ".json", tokens_path]
     for candidate in candidates:
         if Path(candidate).is_file():
@@ -196,12 +198,20 @@ def _load_id_map(model_path: str, tokens_path: str) -> Dict[str, List[int]]:
                 if isinstance(data, dict) and isinstance(
                         data.get("phoneme_id_map"), dict):
                     found = data["phoneme_id_map"]
+                    try:
+                        rate = int(data.get("audio", {}).get(
+                            "sample_rate", TTS_RATE_NATIVE))
+                    except (TypeError, ValueError):
+                        rate = TTS_RATE_NATIVE
+                    if rate <= 0:
+                        rate = TTS_RATE_NATIVE
                     break
             except (OSError, ValueError):
                 continue
     if not found:
         raise RuntimeError("table-phonemes-introuvable")
-    return {str(k): [int(i) for i in v] for k, v in found.items()}
+    id_map = {str(k): [int(i) for i in v] for k, v in found.items()}
+    return id_map, rate
 
 
 def synthesize(text: Any, profile: Any = None, *,
@@ -229,7 +239,7 @@ def synthesize(text: Any, profile: Any = None, *,
         return TtsResult(status="FAILED", reason="moteur-absent:onnxruntime",
                          engine=TTS_ENGINE_NAME)
     try:
-        id_map = _load_id_map(model, tokens)
+        id_map, voice_rate = _load_voice(model, tokens)
     except RuntimeError as exc:
         return TtsResult(status="FAILED", reason=str(exc),
                          engine=TTS_ENGINE_NAME)
@@ -268,14 +278,18 @@ def synthesize(text: Any, profile: Any = None, *,
         if not toks:
             continue
         ids = list(bos) + _ids_for(toks, id_map, pad_ids) + list(eos)
+        feed = {"input": np.array([ids], dtype=np.int64),
+                "input_lengths": np.array([len(ids)], dtype=np.int64),
+                "scales": np.array([noise_scale, noise_w, length_scale],
+                                   dtype=np.float32)}
         try:
-            out = sess.run(
-                None,
-                {"input": np.array([ids], dtype=np.int64),
-                 "input_lengths": np.array([len(ids)], dtype=np.int64),
-                 "scales": np.array([noise_scale, noise_w, length_scale],
-                                    dtype=np.float32),
-                 "sid": np.array([sid], dtype=np.int64)})
+            available_inputs = {node.name for node in sess.get_inputs()}
+        except Exception:
+            available_inputs = set(feed)
+        if "sid" in available_inputs:
+            feed["sid"] = np.array([sid], dtype=np.int64)
+        try:
+            out = sess.run(None, feed)
         except Exception:
             return TtsResult(status="FAILED",
                              reason="erreur-tts:synthese",
@@ -285,8 +299,9 @@ def synthesize(text: Any, profile: Any = None, *,
                * 32767).astype("<i2").tobytes()
         chunks.append(pcm)
         total_frames += len(pcm) // 2
-        chunks.append(b"\x00\x00" * int(TTS_RATE_NATIVE * 0.15))
-        total_frames += int(TTS_RATE_NATIVE * 0.15)
+        silence = b"\x00\x00" * int(voice_rate * 0.15)
+        chunks.append(silence)
+        total_frames += int(voice_rate * 0.15)
         if total_frames * 2 > TTS_MAX_WAV_BYTES:
             return TtsResult(status="FAILED",
                              reason="borne-depassee:audio",
@@ -298,12 +313,12 @@ def synthesize(text: Any, profile: Any = None, *,
     with wave.open(buffer, "wb") as handle:
         handle.setnchannels(1)
         handle.setsampwidth(2)
-        handle.setframerate(TTS_RATE_NATIVE)
+        handle.setframerate(voice_rate)
         handle.writeframes(b"".join(chunks))
     wav = buffer.getvalue()
-    seconds = total_frames / float(TTS_RATE_NATIVE)
+    seconds = total_frames / float(voice_rate)
     return TtsResult(status="OK", reason="", wav=wav,
-                     sample_rate=TTS_RATE_NATIVE, seconds=seconds,
+                     sample_rate=voice_rate, seconds=seconds,
                      engine=TTS_ENGINE_NAME)
 
 
