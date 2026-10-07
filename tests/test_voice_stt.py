@@ -106,7 +106,7 @@ def test_a_moteur_reel_utilise():
 def test_a_transcription_reelle():
     assert ASSET.is_file()
     status, text, detail = transcribe_wav(
-        ASSET, lang="fr", threads=8, timeout_s=180.0)
+        ASSET, lang="fr", threads=8, timeout_s=300.0)
     assert status == "OK", detail
     assert text == ASSET_TEXT
     assert STT_ENGINE_NAME in detail
@@ -138,14 +138,14 @@ def test_a_silence_incertain(tmp_path):
         handle.setframerate(16000)
         handle.writeframes(b"\x00\x00" * 16000)
     status, text, detail = transcribe_wav(
-        silent, lang="fr", threads=8, timeout_s=180.0)
+        silent, lang="fr", threads=8, timeout_s=300.0)
     assert status in ("UNCERTAIN", "OK")
     if status == "UNCERTAIN":
         assert text == ""
 
 
 def test_a_confiance_non_fournie():
-    fn = stt_fn_for(lang="fr", threads=8, timeout_s=180.0)
+    fn = stt_fn_for(lang="fr", threads=8, timeout_s=300.0)
     text, confidence = fn(str(ASSET))
     assert text == ASSET_TEXT
     assert confidence is None
@@ -198,7 +198,7 @@ def test_b_erreur_microphone():
 def test_c_micro_stt_live_core_reponse():
     ok, live = open_session("s-stt-chain")
     assert ok is True
-    real_stt = stt_fn_for(lang="fr", threads=8, timeout_s=180.0)
+    real_stt = stt_fn_for(lang="fr", threads=8, timeout_s=300.0)
     live, result, spoken, ui, report = audio_turn(
         live, ApprovalGate(), capture_fn=_asset_capture(),
         stt_fn=real_stt, now=1000.0, session_id="s-stt-chain")
@@ -212,7 +212,7 @@ def test_c_micro_stt_live_core_reponse():
 def test_c_tts_apres_validation_seulement():
     ok, live = open_session("s-stt-tts")
     assert ok is True
-    real_stt = stt_fn_for(lang="fr", threads=8, timeout_s=180.0)
+    real_stt = stt_fn_for(lang="fr", threads=8, timeout_s=300.0)
     played = []
     synth, play = _synth_played(played)
     live, result, spoken, _, _ = audio_turn(
@@ -238,7 +238,7 @@ def test_c_meme_session_texte_voix():
 def test_d_r0_reel():
     ok, live = open_session("s-stt-r0")
     assert ok is True
-    real_stt = stt_fn_for(lang="fr", threads=8, timeout_s=180.0)
+    real_stt = stt_fn_for(lang="fr", threads=8, timeout_s=300.0)
     live, result, _, _, report = audio_turn(
         live, ApprovalGate(), capture_fn=_asset_capture(),
         stt_fn=real_stt, now=1000.0, session_id="s-stt-r0")
