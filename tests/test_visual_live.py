@@ -188,3 +188,86 @@ def test_threads_propres():
     server.start()
     server.stop()
     assert len(threading.enumerate()) <= before
+
+
+def test_page_locale():
+    from core.visual.hook import VisualHook
+    from core.visual.page import page_html
+    hook = VisualHook()
+    data = hook.snapshot()
+    html = page_html({"etat": data.get("etat", "IDLE"),
+                      "horodatage": data.get("horodatage", 0.0),
+                      "raison": ""})
+    assert "refresh" in html and "IDLE" in html
+    assert "SUCCESS" not in html
+    assert "sk-" not in html and "API_KEY" not in html
+    assert "autorisation" not in html.lower() or "aucun" in html.lower()
+
+
+def test_page_perimee():
+    from core.visual.page import page_html
+    html = page_html({"etat": "SUCCESS", "horodatage": 1.0}, now=5000.0)
+    assert "PÉRIMÉ" in html
+
+
+def test_hook_runtime_reel(tmp_path):
+    from core.runtime.config import RuntimeConfig
+    from core.runtime.lifecycle import create_runtime
+    from core.visual.hook import VisualHook
+    cfg = RuntimeConfig(data_dir=str(tmp_path / "d"), session_id="s-vh")
+    ok, runtime = create_runtime(cfg)
+    assert ok is True
+    try:
+        hook = VisualHook()
+        hook.refresh(runtime)
+        data = hook.snapshot()
+        assert data["etat"] == "IDLE"
+        ok, _ = runtime.begin_running()
+        assert ok is True
+        done, result = runtime.run_turn("Lis le fichier notes")
+        assert done is True
+        hook.refresh(runtime)
+        data = hook.snapshot()
+        assert data["etat"] == "WAITING_APPROVAL"
+        png = hook.png()
+        assert png[:8] == b"\x89PNG\r\n\x1a\n"
+    finally:
+        runtime.stop()
+
+
+def test_hook_voix_mission_reels():
+    from core.voice.voice_loop import VoiceTurnReport
+    from core.visual.hook import VisualHook
+    hook = VisualHook()
+    hook.note_voice(VoiceTurnReport(stage="capture"))
+    assert hook.snapshot()["etat"] == "LISTENING"
+    hook.note_voice(VoiceTurnReport(stage="termine", core="EXECUTED",
+                                    tts="ok"))
+    assert hook.snapshot()["etat"] in ("EXECUTING", "SPEAKING")
+
+
+def test_visual_ne_bloque_pas(tmp_path):
+    import subprocess
+    import sys
+    proc = subprocess.run(
+        [sys.executable, "wilfrid.py", "--data-dir",
+         str(tmp_path / "d"), "--session-id", "s-vis",
+         "--max-turns", "1", "--visual"],
+        input="Bonjour\n", capture_output=True, text=True, timeout=120)
+    assert proc.returncode == 0, proc.stderr[-500:]
+    assert "WILFRID VISUEL http://127.0.0.1:" in proc.stdout
+    assert "WILFRID STOPPED tours=1" in proc.stdout
+
+
+def test_visual_isolation_complete():
+    for name in ("core/visual/hook.py", "core/visual/page.py"):
+        src = Path(name).read_text(encoding="utf-8")
+        tree = ast.parse(src)
+        mods = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                mods.update(a.name.split(".")[0] for a in node.names)
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                mods.add(node.module.split(".")[0])
+        assert not (mods & {"socket", "subprocess"}), (name, mods)
+        assert "taios" not in src.lower(), name

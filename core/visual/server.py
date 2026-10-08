@@ -31,7 +31,7 @@ class _Handler(BaseHTTPRequestHandler):
                 getattr(server, "wilfrid_requests", 0)) + 1
         except Exception:
             pass
-        if self.path not in ("/snapshot", "/png", "/health"):
+        if self.path not in ("/snapshot", "/png", "/health", "/page"):
             self.send_response(404)
             self.end_headers()
             return
@@ -41,7 +41,7 @@ class _Handler(BaseHTTPRequestHandler):
             self.end_headers()
             return
         try:
-            kind, payload, ctype = provider()
+            kind, payload, ctype = provider(self.path)
         except Exception:
             self.send_response(500)
             self.end_headers()
@@ -51,6 +51,10 @@ class _Handler(BaseHTTPRequestHandler):
             self.end_headers()
             return
         if self.path == "/png" and kind != "png":
+            self.send_response(404)
+            self.end_headers()
+            return
+        if self.path == "/page" and kind != "page":
             self.send_response(404)
             self.end_headers()
             return
@@ -142,12 +146,13 @@ class VisualServer:
 
 
 def make_provider(get_frame: Callable[[], Any], tick: int = 0,
-                  fmt: str = "png") -> Callable[[], Tuple[str, bytes, str]]:
-    """Fabrique le fournisseur : frame → (snapshot|png)."""
+                  fmt: str = "png") -> Callable[[Any], Tuple[str, bytes,
+                                                             str]]:
+    """Fabrique le fournisseur (compatible tests, sans effet)."""
     from core.visual.presence import render_json
     from core.visual.renderer import render_png
 
-    def _provide() -> Tuple[str, bytes, str]:
+    def _provide(path: Any = None) -> Tuple[str, bytes, str]:
         try:
             frame = get_frame()
         except Exception:

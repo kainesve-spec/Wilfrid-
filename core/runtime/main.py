@@ -25,6 +25,7 @@ def _parse(argv: Optional[List[str]] = None) -> RuntimeConfig:
     parser.add_argument("--max-turns", type=int, default=None)
     parser.add_argument("--speak", action="store_true", default=None)
     parser.add_argument("--log-level", default=None)
+    parser.add_argument("--visual", action="store_true", default=False)
     args = parser.parse_args(argv)
     data = {}
     if args.data_dir:
@@ -85,6 +86,26 @@ def run(argv: Optional[List[str]] = None) -> int:
     print("WILFRID ETAT components=%s" % ",".join(
         "%s=%s" % (name, "ok" if info["ready"] else "ko")
         for name, info in runtime.status()["components"].items()))
+    visual_hook = None
+    visual_server = None
+    cli_args = list(argv) if argv is not None else sys.argv[1:]
+    if "--visual" in cli_args:
+        try:
+            from core.visual.hook import VisualHook
+            from core.visual.server import VisualServer
+            visual_hook = VisualHook()
+            visual_hook.refresh(runtime)
+            visual_server = VisualServer(provider=visual_hook.serve)
+            ok_server, why_server = visual_server.start()
+            if ok_server:
+                print("WILFRID VISUEL http://127.0.0.1:%d/page" %
+                      visual_server.port)
+            else:
+                print("WILFRID VISUEL indisponible: %s" % why_server)
+                visual_server = None
+        except Exception as exc:
+            print("WILFRID VISUEL erreur: %s" % type(exc).__name__)
+            visual_hook, visual_server = None, None
     stop_requested = []
 
     def _handle(_signum: int, _frame: Any = None) -> None:
@@ -121,8 +142,18 @@ def run(argv: Optional[List[str]] = None) -> int:
                 handled, output = False, ""
             if handled:
                 print("Wilfrid: %s" % output)
+                if visual_hook is not None:
+                    try:
+                        visual_hook.refresh(runtime)
+                    except Exception:
+                        pass
                 continue
             done, result = runtime.run_turn(text)
+            if visual_hook is not None:
+                try:
+                    visual_hook.refresh(runtime)
+                except Exception:
+                    pass
             if not done:
                 print("WILFRID ERROR: %s" % result, file=sys.stderr)
                 code = 3
@@ -143,6 +174,16 @@ def run(argv: Optional[List[str]] = None) -> int:
                 signal.signal(signal.SIGTERM, previous_term)
         except (OSError, ValueError):
             pass
+        if visual_hook is not None:
+            try:
+                visual_hook.refresh(runtime)
+            except Exception:
+                pass
+        if visual_server is not None:
+            try:
+                visual_server.stop()
+            except Exception:
+                pass
         runtime.stop()
     print("WILFRID STOPPED tours=%d" % runtime.turn_count)
     if stop_requested:

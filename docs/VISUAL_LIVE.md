@@ -34,6 +34,22 @@ lui. Démarrage/arrêt bornés, thread démon unique, requêtes comptées.
 Construire `VisualServer(make_provider(get_frame, tick, fmt))`,
 `start()`, `stop()`. Aucun processus après arrêt (vérifié en test).
 
+## Lancement --visual
+
+```sh
+python3 wilfrid.py --visual [--max-turns N]
+```
+
+Affiche `WILFRID VISUEL http://127.0.0.1:8787/page` (`/snapshot` JSON
+horodaté, `/png` image). Sans `--visual` : comportement inchangé, aucun
+serveur. Arrêt : fin d'entrée / Ctrl-C → serveur stoppé avec le runtime.
+
+## Vérification
+
+Consulter `/page` (état + fraîcheur), `/snapshot` (JSON), `/png`
+(signature PNG). Périmé > 30 s signalé. Sans client HTTP : ANSI/JSON
+restent disponibles via `presence.py`.
+
 ## Limites GUI Android
 
 Aucun toolkit/display/framebuffer : pas de fenêtre native ni de plein
