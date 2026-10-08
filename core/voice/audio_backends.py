@@ -193,7 +193,15 @@ def termux_mic_capture(max_seconds: Any = 2.0,
 
 
 def termux_tts_speak(text: Any, *, timeout_s: Any = 20.0) -> Tuple[bool, str]:
-    """Parle via le TTS système Android. `(joué, raison)` honnêtes."""
+    """Parle via le TTS système Android. `(joué, raison)` honnêtes.
+
+    Verrou incident robot-voice : DÉSACTIVÉ par défaut. Aucun son sans
+    `WILFRID_ALLOW_ANDROID_TTS=1` explicite. Le pipeline Wilfrid ne
+    l'appelle jamais (voix officielle = Pierre locale).
+    """
+    import os
+    if os.environ.get("WILFRID_ALLOW_ANDROID_TTS") != "1":
+        return False, "moteur-desactive"
     if not isinstance(text, str) or not text.strip():
         return False, "entree-invalide"
     if len(text.strip()) > 2000:

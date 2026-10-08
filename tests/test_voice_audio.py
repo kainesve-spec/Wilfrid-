@@ -650,22 +650,52 @@ def test_f_tts_erreur():
     assert report.tts_status == "FAILED"
 
 
-def test_f_termux_tts_honnete():
+def test_f_termux_tts_desactive_par_defaut(monkeypatch):
+    # Contrat post-incident : aucun son Android sans opt-in explicite.
+    # Aucune synthèse réelle ne doit partir pendant les tests.
+    monkeypatch.delenv("WILFRID_ALLOW_ANDROID_TTS", raising=False)
     ok_flag, reason = termux_tts_speak("Test Wilfrid audio.", timeout_s=20.0)
-    assert isinstance(ok_flag, bool) and isinstance(reason, str)
-    assert reason in ("parle", "moteur-absent", "permission-absente",
-                      "erreur-tts", "entree-invalide", "borne-depassee")
+    assert ok_flag is False and reason == "moteur-desactive"
+    bad, bad_reason = termux_tts_speak("   ")
+    assert bad is False and bad_reason == "moteur-desactive"
+
+
+def test_f_termux_tts_optin_sans_son_reel(monkeypatch):
+    # Chemin opt-in vérifié avec subprocess simulé : zéro audio réel.
+    import subprocess as _subprocess
+    monkeypatch.setenv("WILFRID_ALLOW_ANDROID_TTS", "1")
+    calls = []
+
+    class _Done:
+        returncode = 0
+
+    def _fake_run(*args, **kwargs):
+        calls.append(args[0])
+        return _Done()
+
+    monkeypatch.setattr(_subprocess, "run", _fake_run)
+    ok_flag, reason = termux_tts_speak("Test Wilfrid audio.", timeout_s=20.0)
+    assert ok_flag is True and reason == "parle"
+    assert calls and calls[0][0] == "termux-tts-speak"
     bad, bad_reason = termux_tts_speak("   ")
     assert bad is False and bad_reason == "entree-invalide"
 
 
-def test_f_lecture_pcm_honnete():
+def test_f_lecture_pcm_honnete(monkeypatch):
+    # Lecture réelle neutralisée : sounddevice simulé, zéro son émis.
+    import sys as _sys
+    import types as _types
+
+    played = []
+    fake_sd = _types.SimpleNamespace(
+        play=lambda samples, samplerate=None: played.append(
+            (len(samples), samplerate)),
+        wait=lambda: None)
+    monkeypatch.setitem(_sys.modules, "sounddevice", fake_sd)
     pcm, _ = _pcm(seconds=0.1)
     ok_flag, reason = play_pcm(pcm, RATE, timeout_s=10.0)
-    assert isinstance(ok_flag, bool) and isinstance(reason, str)
-    assert reason in ("joue", "moteur-absent", "peripherique-absent",
-                      "permission-absente", "erreur-lecture",
-                      "entree-invalide", "borne-depassee")
+    assert ok_flag is True and reason == "joue"
+    assert played and played[0][1] == RATE
     bad, bad_reason = play_pcm(b"", RATE)
     assert bad is False and bad_reason == "entree-invalide"
 
