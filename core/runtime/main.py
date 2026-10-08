@@ -26,6 +26,7 @@ def _parse(argv: Optional[List[str]] = None) -> RuntimeConfig:
     parser.add_argument("--speak", action="store_true", default=None)
     parser.add_argument("--log-level", default=None)
     parser.add_argument("--visual", action="store_true", default=False)
+    parser.add_argument("--app", action="store_true", default=False)
     args = parser.parse_args(argv)
     data = {}
     if args.data_dir:
@@ -123,6 +124,8 @@ def run(argv: Optional[List[str]] = None) -> int:
         if not ok:
             print("WILFRID ERROR: %s" % reason, file=sys.stderr)
             return 3
+        if "--app" in cli_args:
+            return _run_app(runtime, stop_requested)
         turns = 0
         while not stop_requested:
             try:
@@ -189,6 +192,42 @@ def run(argv: Optional[List[str]] = None) -> int:
     if stop_requested:
         return 130
     return code
+
+
+def _run_app(runtime: Any, stop_requested: list) -> int:
+    """Mode application : runtime persistant + interface locale."""
+    from core.visual.app import WilfridApp
+    from core.visual.server import VisualServer
+    try:
+        app = WilfridApp(runtime)
+        server = VisualServer(app=app)
+        ok, why = server.start()
+    except Exception as exc:
+        print("WILFRID APP ERROR: %s" % type(exc).__name__,
+              file=sys.stderr)
+        return 3
+    if not ok:
+        print("WILFRID APP ERROR: %s" % why, file=sys.stderr)
+        return 3
+    print("WILFRID APP http://127.0.0.1:%d/ (Ctrl-C pour arrêter)" %
+          server.port)
+    try:
+        while not stop_requested:
+            try:
+                line = sys.stdin.readline()
+            except (OSError, ValueError):
+                break
+            if not line:
+                break
+            if line.strip() == "":
+                break
+    finally:
+        try:
+            server.stop()
+        except Exception:
+            pass
+    print("WILFRID APP STOPPED")
+    return 0
 
 
 def main(argv: Optional[List[str]] = None) -> int:

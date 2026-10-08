@@ -19,18 +19,58 @@ DEFAULT_PORT = 8787
 
 
 class _Handler(BaseHTTPRequestHandler):
-    provider: Optional[Callable[[], Tuple[str, bytes, str]]] = None
+    provider: Optional[Callable[..., Any]] = None
+    app: Any = None
 
     def log_message(self, *args: Any) -> None:
         pass
 
     def do_GET(self) -> None:
+        self._route(b"")
+
+    def do_POST(self) -> None:
+        try:
+            length = int(self.headers.get("Content-Length", "0") or "0")
+        except (TypeError, ValueError):
+            length = 0
+        if length < 0 or length > 2097152:
+            self.send_response(413)
+            self.end_headers()
+            return
+        try:
+            body = self.rfile.read(length) if length else b""
+        except (OSError, ValueError):
+            body = b""
+        self._route(bytes(body))
+
+    def _route(self, body: bytes) -> None:
         try:
             server = self.server
             server.wilfrid_requests = int(
                 getattr(server, "wilfrid_requests", 0)) + 1
         except Exception:
             pass
+        app = getattr(type(self), "app", None)
+        if app is not None:
+            try:
+                code, payload, ctype = app.handle(self.path, body)
+            except Exception:
+                code, payload, ctype = 500, b"erreur-application", \
+                    "text/plain"
+            body_out = payload if isinstance(payload, bytes) else b""
+            try:
+                self.send_response(code)
+                self.send_header("Content-Type", ctype)
+                self.send_header("Content-Length", str(len(body_out)))
+                self.end_headers()
+                self.wfile.write(body_out)
+            except (OSError, ValueError):
+                pass
+            return
+        if self.command != "GET":
+            self.send_response(405)
+            self.end_headers()
+            return
         if self.path not in ("/snapshot", "/png", "/health", "/page"):
             self.send_response(404)
             self.end_headers()
@@ -75,12 +115,12 @@ class VisualServer:
     """Serveur local : démarrage/arrêt bornés, état observable."""
 
     def __init__(self, host: str = DEFAULT_HOST, port: int = DEFAULT_PORT,
-                 provider: Optional[Callable[[], Tuple[str, bytes,
-                                                       str]]] = None
-                 ) -> None:
+                 provider: Optional[Callable[..., Any]] = None,
+                 app: Any = None) -> None:
         self.host = host
         self.port = int(port)
         self._provider = provider
+        self._app = app
         self._server: Optional[HTTPServer] = None
         self._thread: Optional[threading.Thread] = None
         self.requests = 0
@@ -96,6 +136,7 @@ class VisualServer:
 
         Bound.provider = staticmethod(provider) \
             if provider is not None else None
+        Bound.app = self._app
         try:
             server = HTTPServer((self.host, self.port), Bound)
         except OSError as exc:
