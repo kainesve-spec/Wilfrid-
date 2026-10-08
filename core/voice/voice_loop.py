@@ -62,6 +62,7 @@ class VoiceLoop:
         self._capture_fn = capture_fn
         self._wake_factory = wake_factory
         self._wake: Any = None
+        self._run_lock = threading.Lock()
 
     # ---------------------------------------------------------- défauts réels
     def _stt(self) -> Any:
@@ -106,7 +107,12 @@ class VoiceLoop:
 
         return _mic
 
-    # ------------------------------------------------------------------ tour
+    def _aborted(self, report: VoiceTurnReport) -> bool:
+        if self._stop_event.is_set():
+            report.stage = "arret"
+            self.state = "LISTENING"
+            return True
+        return False
     def listen_once(self, timeout_s: Optional[float] = None) -> Tuple[bool,
                                                                        str]:
         """Attente : wake réel si fourni (borné), sinon capture directe."""
@@ -166,6 +172,8 @@ class VoiceLoop:
             report.capture = str(exc)[:60]
             self.state = "LISTENING"
             return report
+        if self._aborted(report):
+            return report
         report.stage = "stt"
         try:
             produced = self._stt()(pcm if isinstance(
@@ -185,6 +193,8 @@ class VoiceLoop:
             report.stage = "echec-stt"
             report.stt = str(exc)[:60]
             self.state = "LISTENING"
+            return report
+        if self._aborted(report):
             return report
         report.stage = "core"
         try:
@@ -207,6 +217,8 @@ class VoiceLoop:
             report.stage = "echec-core"
             report.core = type(exc).__name__
             self.state = "LISTENING"
+            return report
+        if self._aborted(report):
             return report
         report.stage = "tts"
         self.state = "SPEAKING"
@@ -237,29 +249,38 @@ class VoiceLoop:
     # ----------------------------------------------------------------- boucle
     def run(self) -> Dict[str, Any]:
         """Boucle bornée : écoute → tours → STOPPED. Arrêt explicite."""
-        if self.state not in ("IDLE", "LISTENING", "ERROR"):
+        if not self._run_lock.acquire(blocking=False):
             return {"tours": self.turns, "etat": self.state,
-                    "raison": "etat-inattendu"}
-        self.state = "LISTENING"
-        self._stop_event.clear()
-        while not self._stop_event.is_set():
-            if self.max_turns and self.turns >= self.max_turns:
-                break
-            heard, why = self.listen_once()
-            if self._stop_event.is_set():
-                break
-            if not heard:
-                self.reports.append(VoiceTurnReport(
-                    stage="attente-" + why))
-                if self.max_turns:
-                    self.turns += 1
-                continue
-            report = self.turn_once()
-            self.reports.append(report)
-            self.turns += 1
-        self.state = "STOPPED"
-        return {"tours": self.turns, "etat": self.state,
-                "raison": "arret-explicite"}
+                    "raison": "boucle-deja-active"}
+        try:
+            if self.state not in ("IDLE", "LISTENING", "ERROR", "STOPPED"):
+                return {"tours": self.turns, "etat": self.state,
+                        "raison": "etat-inattendu"}
+            self.state = "LISTENING"
+            self._stop_event.clear()
+            while not self._stop_event.is_set():
+                if self.max_turns and self.turns >= self.max_turns:
+                    break
+                heard, why = self.listen_once()
+                if self._stop_event.is_set():
+                    break
+                if not heard:
+                    self.reports.append(VoiceTurnReport(
+                        stage="attente-" + why))
+                    if self.max_turns:
+                        self.turns += 1
+                    continue
+                report = self.turn_once()
+                self.reports.append(report)
+                self.turns += 1
+            self.state = "STOPPED"
+            return {"tours": self.turns, "etat": self.state,
+                    "raison": "arret-explicite"}
+        finally:
+            try:
+                self._run_lock.release()
+            except RuntimeError:
+                pass
 
     def stop(self) -> Dict[str, Any]:
         """Arrêt fiable : signal + wake + état STOPPED."""

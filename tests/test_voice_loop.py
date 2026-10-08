@@ -146,25 +146,33 @@ def test_h_refus_sans_execution():
     assert runtime.texts == ["supprime tout"]
 
 
-def test_i_arret_pendant_attente():
-    loop = VoiceLoop(FakeRuntime(), max_turns=0)
+def test_i_arret_puis_redemarrage_borne():
+    loop = VoiceLoop(FakeRuntime(), capture_fn=lambda: (_pcm(), 16000),
+                     stt_fn=_stt_ok(), max_turns=1)
     out = loop.stop()
     assert out["etat"] == "STOPPED"
     done = loop.run()
-    assert done["etat"] == "STOPPED" and done["tours"] == 0
+    assert done["etat"] == "STOPPED" and done["tours"] == 1
 
 
 def test_j_arret_pendant_traitement():
     loop = VoiceLoop(FakeRuntime(), capture_fn=lambda: (_pcm(), 16000),
                      max_turns=5)
+    synth_calls = []
 
     def stopper(_ref):
         loop.stop()
         return ("Bonjour", 0.9)
 
+    def spy_synth(text):
+        synth_calls.append(text)
+        return b"WAV"
+
     loop._stt_fn = stopper
+    loop._synth_fn = spy_synth
     report = loop.turn_once()
-    assert report.stage == "termine"
+    assert report.stage == "arret"
+    assert synth_calls == []
     done = loop.run()
     assert done["etat"] == "STOPPED"
     assert loop._wake is None
@@ -209,6 +217,95 @@ def test_wake_invalide():
     loop = VoiceLoop(FakeRuntime(), wake_factory=lambda: "pas-un-wake")
     heard, why = loop.listen_once()
     assert heard is False and why == "wake-invalide"
+
+
+def test_double_start_refuse():
+    import threading
+    import time
+    release = threading.Event()
+    started = threading.Event()
+
+    def slow_stt(_ref):
+        started.set()
+        release.wait(timeout=10.0)
+        return ("Bonjour", 0.9)
+
+    runtime = FakeRuntime()
+    loop = VoiceLoop(runtime, capture_fn=lambda: (_pcm(), 16000),
+                     stt_fn=slow_stt, max_turns=5)
+    worker = threading.Thread(target=loop.run, daemon=True)
+    worker.start()
+    assert started.wait(timeout=10.0)
+    second = loop.run()
+    assert second["raison"] == "boucle-deja-active"
+    release.set()
+    loop.stop()
+    worker.join(timeout=10.0)
+    assert loop.state == "STOPPED"
+
+
+def test_stop_pendant_tour_annule_tts():
+    import threading
+    import time
+    synth_calls = []
+    release = threading.Event()
+    entered = threading.Event()
+
+    def slow_capture():
+        entered.set()
+        release.wait(timeout=10.0)
+        return (_pcm(), 16000)
+
+    def spy_synth(text):
+        synth_calls.append(text)
+        return b"WAV"
+
+    loop = VoiceLoop(FakeRuntime(), capture_fn=slow_capture,
+                     stt_fn=_stt_ok(), synth_fn=spy_synth, max_turns=5)
+    worker = threading.Thread(target=loop.run, daemon=True)
+    worker.start()
+    assert entered.wait(timeout=10.0)
+    time.sleep(0.2)
+    loop.stop()
+    release.set()
+    worker.join(timeout=10.0)
+    assert synth_calls == []
+    assert loop.state == "STOPPED"
+
+
+def test_core_erreur_honnete():
+    class BrokenRuntime:
+        def run_turn(self, text, **_kw):
+            raise RuntimeError("core HS")
+
+    loop = VoiceLoop(BrokenRuntime(), capture_fn=lambda: (_pcm(), 16000),
+                     stt_fn=_stt_ok())
+    report = loop.turn_once()
+    assert report.stage == "echec-core"
+
+
+def test_restart_apres_stop():
+    runtime = FakeRuntime()
+    loop = VoiceLoop(runtime, capture_fn=lambda: (_pcm(), 16000),
+                     stt_fn=_stt_ok(), max_turns=1)
+    first = loop.run()
+    assert first["etat"] == "STOPPED" and first["tours"] == 1
+    loop.max_turns = 2
+    second = loop.run()
+    assert second["etat"] == "STOPPED" and second["tours"] == 2
+    assert runtime.texts == ["Bonjour", "Bonjour"]
+
+
+def test_aucun_thread_residuel():
+    import threading
+    before = len(threading.enumerate())
+    runtime = FakeRuntime()
+    loop = VoiceLoop(runtime, capture_fn=lambda: (_pcm(), 16000),
+                     stt_fn=_stt_ok(), max_turns=2)
+    loop.run()
+    loop.stop()
+    after = len(threading.enumerate())
+    assert after <= before
 
 
 def test_l_sans_android_ni_elevenlabs():
