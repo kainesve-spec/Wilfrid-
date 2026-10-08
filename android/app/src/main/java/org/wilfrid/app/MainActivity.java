@@ -2,7 +2,10 @@ package org.wilfrid.app;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.os.Bundle;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -77,6 +80,47 @@ public class MainActivity extends Activity {
                             + "le texte reste utilisable.",
                     Toast.LENGTH_LONG).show();
         }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        menu.add(0, 1, 0, "Sphère flottante");
+        menu.add(0, 2, 0, "Retirer la sphère");
+        menu.add(0, 3, 0, "Autoriser l'overlay");
+        menu.add(0, 4, 0, "Démarrer le moteur");
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int code = item.getItemId();
+        if (code == 1) {
+            if (!BubbleService.overlayGranted(this)) {
+                Toast.makeText(this,
+                        "Overlay non accordé : ouvre les paramètres "
+                                + "via « Autoriser l'overlay ».",
+                        Toast.LENGTH_LONG).show();
+                return true;
+            }
+            startService(new Intent(this, BubbleService.class));
+            return true;
+        }
+        if (code == 2) {
+            stopService(new Intent(this, BubbleService.class));
+            return true;
+        }
+        if (code == 3) {
+            startActivity(BubbleService.overlaySettingsIntent());
+            return true;
+        }
+        if (code == 4) {
+            String done = EngineStarter.requestStart(this);
+            Toast.makeText(this, "Moteur : " + done, Toast.LENGTH_LONG)
+                    .show();
+            web.reload();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     @Override

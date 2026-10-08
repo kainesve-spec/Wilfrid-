@@ -15,8 +15,10 @@ def test_projet_present():
     assert (APP / "settings.gradle").is_file()
     assert (APP / "app" / "build.gradle").is_file()
     assert (APP / "app" / "src" / "main" / "AndroidManifest.xml").is_file()
-    assert (APP / "app" / "src" / "main" / "java" / "org" / "wilfrid" /
-            "app" / "MainActivity.java").is_file()
+    for name in ("MainActivity.java", "BubbleService.java",
+                 "SphereView.java", "EngineStarter.java"):
+        assert (APP / "app" / "src" / "main" / "java" / "org" /
+                "wilfrid" / "app" / name).is_file(), name
     assert Path(".github/workflows/android.yml").is_file()
 
 
@@ -49,6 +51,22 @@ def test_activite_sans_pont_autorite():
     assert "taios" not in lowered
     assert "approve" not in lowered
     assert "elevenlabs" not in lowered
+
+
+def test_overlay_natif():
+    src = _read("app/src/main/java/org/wilfrid/app/BubbleService.java")
+    assert "TYPE_APPLICATION_OVERLAY" in src
+    assert "canDrawOverlays" in src
+    assert "ACTION_MANAGE_OVERLAY_PERMISSION" in src
+    assert "removeView" in src and "onDestroy" in src
+    assert "approve" not in src.lower()
+    sphere = _read("app/src/main/java/org/wilfrid/app/SphereView.java")
+    assert "setState" in sphere and "onDraw" in sphere
+    manifest = _read("app/src/main/AndroidManifest.xml")
+    assert "BubbleService" in manifest
+    engine = _read("app/src/main/java/org/wilfrid/app/EngineStarter.java")
+    assert "RUN_COMMAND" in engine
+    assert "approve" not in engine.lower()
 
 
 def test_workflow_ci():
