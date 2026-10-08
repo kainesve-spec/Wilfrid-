@@ -1,0 +1,87 @@
+{
+  "pack_id": "wilfrid-core-knowledge",
+  "version": "1.0.0",
+  "langue": "fr",
+  "documents": [
+    {
+      "id": "wilfrid-identite",
+      "titre": "Identité de Wilfrid",
+      "categorie": "identite",
+      "version": "1.0.0",
+      "langue": "fr",
+      "source": "pack-officiel-wilfrid",
+      "fichier": "01-identite.txt",
+      "sha256": "60dca03d2b47aaca3ad537c1ef1e8445df9e8ee3c7dfb22510cc85a8d6837c22"
+    },
+    {
+      "id": "wilfrid-architecture",
+      "titre": "Architecture générale",
+      "categorie": "architecture",
+      "version": "1.0.0",
+      "langue": "fr",
+      "source": "pack-officiel-wilfrid",
+      "fichier": "02-architecture.txt",
+      "sha256": "31df820e1eec31303c9bd65a54535fa685ddf7fe9ca342268333f5e2f0c115a3"
+    },
+    {
+      "id": "wilfrid-offline",
+      "titre": "Fonctionnement hors connexion",
+      "categorie": "fonctionnement",
+      "version": "1.0.0",
+      "langue": "fr",
+      "source": "pack-officiel-wilfrid",
+      "fichier": "03-offline.txt",
+      "sha256": "e2492a2709b4993acf63adca9e629c6f875d2dee013edc8326abe3f70c971d2d"
+    },
+    {
+      "id": "wilfrid-securite",
+      "titre": "Règles de sécurité",
+      "categorie": "securite",
+      "version": "1.0.0",
+      "langue": "fr",
+      "source": "pack-officiel-wilfrid",
+      "fichier": "04-securite.txt",
+      "sha256": "88b7f7f9c6a03a48692c99876a3ccf264c23f2e30e3717c9b123e30ce6756652"
+    },
+    {
+      "id": "wilfrid-isolation",
+      "titre": "Séparation avec TAIOS",
+      "categorie": "securite",
+      "version": "1.0.0",
+      "langue": "fr",
+      "source": "pack-officiel-wilfrid",
+      "fichier": "05-isolation.txt",
+      "sha256": "582bc969639c4be5a76699a751ed2339446ff03be00c86c8824fb998f1757d60"
+    },
+    {
+      "id": "wilfrid-voix",
+      "titre": "Voix officielle Pierre",
+      "categorie": "voix",
+      "version": "1.0.0",
+      "langue": "fr",
+      "source": "pack-officiel-wilfrid",
+      "fichier": "06-voix.txt",
+      "sha256": "b751c6b0ec903716de056b6d8a662032025a1c837d7ec34289040aad17c0cc0b"
+    },
+    {
+      "id": "wilfrid-memoire",
+      "titre": "Mémoire et contexte",
+      "categorie": "memoire",
+      "version": "1.0.0",
+      "langue": "fr",
+      "source": "pack-officiel-wilfrid",
+      "fichier": "07-memoire.txt",
+      "sha256": "fca5b28f54f4595be5a4a82ecb2109de74e7a6f92aa344c7237c4d8d01664db8"
+    },
+    {
+      "id": "wilfrid-knowledge",
+      "titre": "Rôle du Knowledge Engine",
+      "categorie": "knowledge",
+      "version": "1.0.0",
+      "langue": "fr",
+      "source": "pack-officiel-wilfrid",
+      "fichier": "08-knowledge.txt",
+      "sha256": "89acc79715e8d8c172f74087e6d0b694f98e1222e846be110382370dd498d2f1"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+Wilfrid — architecture générale.
+
+Le dialogue reçoit le texte utilisateur et produit une réponse via le
+Core cognitif (classifier, decider, dispatch, planner). Chaque tour de
+conversation passe par une LiveSession : états NEW, ACTIVE,
+WAITING_CONFIRMATION, CLOSED et ERROR. Une session fermée ou en erreur
+est terminale.
+
+La mémoire persistante stocke faits et contexte avec recherche,
+expiration et invalidation. Le Knowledge Engine (SQLite FTS5) fournit
+la recherche locale et les réponses sourcées. La voix Pierre vocalise
+les réponses validées après préparation de la prononciation.
+
+Le sous-système P7 gouverne les effets : catalogue de capabilities,
+Approval Gate (approbation humaine explicite), mandats, journal
+append-only et vérification indépendante des effets.

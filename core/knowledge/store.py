@@ -174,6 +174,39 @@ class KnowledgeStore:
             if cur.rowcount == 0:
                 raise ValueError(f"document inconnu: {doc_id}")
 
+    def document_sha(self, doc_id: str) -> Optional[str]:
+        """Empreinte stockée d'un document (None si inconnu)."""
+        row = self._conn.execute(
+            "SELECT sha256 FROM documents WHERE id=?", (doc_id,)).fetchone()
+        return str(row["sha256"]) if row else None
+
+    def delete_document_chunks(self, doc_id: str) -> int:
+        """Retire chunks + index + provenance d'un document (re-ingestion).
+
+        Retourne le nombre de chunks retirés. Opération bornée à un seul
+        document ; les autres documents et le journal sont intacts.
+        """
+        with self._conn:
+            self._conn.execute(
+                "DELETE FROM chunks_fts WHERE chunk_id IN "
+                "(SELECT id FROM chunks WHERE document_id=?)", (doc_id,))
+            self._conn.execute(
+                "DELETE FROM provenance WHERE document_id=?", (doc_id,))
+            cur = self._conn.execute(
+                "DELETE FROM chunks WHERE document_id=?", (doc_id,))
+            return cur.rowcount
+
+    def count_chunks(self, document_id: str = "") -> int:
+        """Nombre de chunks (total ou par document). Lecture seule."""
+        if document_id:
+            row = self._conn.execute(
+                "SELECT COUNT(*) AS n FROM chunks WHERE document_id=?",
+                (document_id,)).fetchone()
+        else:
+            row = self._conn.execute(
+                "SELECT COUNT(*) AS n FROM chunks").fetchone()
+        return int(row["n"]) if row else 0
+
     # --------------------------------------------------------------- jobs
     def create_job(self, job_id: str, kind: str,
                    document_id: Optional[str] = None) -> str:

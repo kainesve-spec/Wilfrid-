@@ -25,6 +25,7 @@ class RuntimeConfig:
     data_dir: str = DEFAULT_DATA_DIR
     memory_path: str = ""
     knowledge_path: str = ""
+    knowledge_pack_dir: str = ""
     journal_path: str = ""
     session_id: str = DEFAULT_SESSION_ID
     max_turns: int = 0
@@ -39,9 +40,15 @@ class RuntimeConfig:
         memory = self.memory_path or str(Path(base) / "memory.sqlite")
         knowledge = self.knowledge_path or str(Path(base) / "knowledge.sqlite")
         journal = self.journal_path or str(Path(base) / "journal.jsonl")
+        try:
+            from core.knowledge.pack import pack_dir_default
+            pack = self.knowledge_pack_dir or pack_dir_default()
+        except Exception:
+            pack = self.knowledge_pack_dir
         return RuntimeConfig(
             env=self.env, data_dir=base, memory_path=memory,
-            knowledge_path=knowledge, journal_path=journal,
+            knowledge_path=knowledge, knowledge_pack_dir=pack,
+            journal_path=journal,
             session_id=self.session_id, max_turns=self.max_turns,
             speak=self.speak, log_level=self.log_level,
             offline=self.offline, dictionary=dict(self.dictionary))
@@ -65,6 +72,7 @@ def _from_mapping(data: Dict[str, Any]) -> RuntimeConfig:
         data_dir=str(data.get("data_dir", DEFAULT_DATA_DIR)),
         memory_path=str(data.get("memory_path", "")),
         knowledge_path=str(data.get("knowledge_path", "")),
+        knowledge_pack_dir=str(data.get("knowledge_pack_dir", "")),
         journal_path=str(data.get("journal_path", "")),
         session_id=str(data.get("session_id", DEFAULT_SESSION_ID)),
         max_turns=max_turns,

@@ -1,0 +1,13 @@
+Wilfrid — voix officielle Pierre.
+
+La voix officielle unique de Wilfrid est Pierre (voix upmc, locuteur
+pierre) : masculine, calme, intelligible en français. La synthèse est
+locale (moteur piper-VITS via onnxruntime), hors connexion, sans voix
+distante. Une seule voix est active quel que soit l'état réseau.
+
+Avant synthèse, la couche de prononciation prépare le texte validé :
+nombres en toutes lettres (100 devient cent, 1500 devient mille cinq
+cents), décimales et pourcentages en français, acronymes épellés (TAIOS
+devient T A I O S), dictionnaire extensible (Wilfrid, QanXorus, USDT).
+Le texte affiché n'est jamais modifié ; seule la forme vocalisée change.
+La voix ne reçoit que des réponses validées et ne décide de rien.

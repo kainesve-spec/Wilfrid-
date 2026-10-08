@@ -49,6 +49,7 @@ class WilfridRuntime:
     _live: Any = field(default=None, repr=False)
     _gate: Any = field(default=None, repr=False)
     _memory: Any = field(default=None, repr=False)
+    _kstore: Any = field(default=None, repr=False)
     _journal: Any = field(default=None, repr=False)
     _started: bool = field(default=False, repr=False)
 
@@ -101,13 +102,27 @@ class WilfridRuntime:
             return False, "memoire-indisponible"
         try:
             from core.knowledge.store import KnowledgeStore
-            store = KnowledgeStore(resolved.knowledge_path)
-            store.close()
-            self._mark("knowledge", True, resolved.knowledge_path)
+            kstore = KnowledgeStore(resolved.knowledge_path)
+            self._kstore = kstore
         except Exception:
             self._move("ERROR", "knowledge-indisponible")
             self.cleanup()
             return False, "knowledge-indisponible"
+        try:
+            from core.knowledge.pack import ingest_pack
+            ok, stats = ingest_pack(kstore, resolved.knowledge_pack_dir)
+        except Exception:
+            ok, stats = False, {"raison": "ingestion-impossible"}
+        if ok:
+            self._mark("knowledge", True,
+                       "pack %d docs/%d chunks" % (
+                           stats.get("documents", 0),
+                           stats.get("chunks", 0)))
+            self._mark("knowledge_pack", True, resolved.knowledge_pack_dir)
+        else:
+            self._mark("knowledge", False, str(stats.get("raison", "?")))
+            self._mark("knowledge_pack", False,
+                       str(stats.get("raison", "?")))
         try:
             from core.loop.live import open_session
             from core.p7.approval_gate import ApprovalGate
@@ -161,10 +176,17 @@ class WilfridRuntime:
         """Un tour texte via la boucle existante. Runtime RUNNING requis."""
         if self.state != "RUNNING":
             return False, "etat-inattendu:" + self.state
+        from core.cognitive.need_search import answer_search
         from core.loop.live import submit_turn
+
+        def _search(output: Any) -> Any:
+            if self._kstore is None:
+                return None
+            return answer_search(self._kstore, output, now=now)
+
         self._live, result = submit_turn(
             self._live, self._gate, text, now=now, source="text",
-            memory=self._memory, memorize=True,
+            search_fn=_search, memory=self._memory, memorize=True,
             session_id=self._live.id)
         self.turn_count += 1
         return True, result
@@ -189,7 +211,7 @@ class WilfridRuntime:
 
     def cleanup(self) -> None:
         """Fermeture des ressources, sans exception."""
-        for attr in ("_memory", "_journal"):
+        for attr in ("_memory", "_kstore", "_journal"):
             handle = getattr(self, attr, None)
             if handle is not None:
                 try:

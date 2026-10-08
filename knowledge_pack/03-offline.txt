@@ -1,0 +1,11 @@
+Wilfrid — fonctionnement hors connexion (offline).
+
+En mode offline, Wilfrid démarre et répond sans Internet : le dialogue,
+la LiveSession, la mémoire SQLite, le Knowledge Engine FTS5, le STT
+local whisper et la voix locale Pierre sont tous locaux. La préparation
+de la prononciation (nombres, acronymes, dictionnaire) est locale.
+
+Limites du mode offline : aucun téléchargement de documents, aucune
+recherche sur Internet, aucune voix distante. Le téléchargement HTTPS
+gouverné et la voix connectée sont désactivés sans réseau. Le système
+signale explicitement ce qui est indisponible au lieu de simuler.

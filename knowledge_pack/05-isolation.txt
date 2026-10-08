@@ -1,0 +1,12 @@
+Wilfrid — séparation avec TAIOS.
+
+Wilfrid et TAIOS sont strictement isolés. Wilfrid n'importe aucun
+module TAIOS, n'appelle aucune API TAIOS, ne modifie aucun fichier
+TAIOS et ne dépend d'aucune exécution TAIOS. Le code de Wilfrid ne
+référence TAIOS que comme vocabulaire (dictionnaire de prononciation),
+jamais comme système appelable.
+
+Wilfrid ne possède aucune autorité de trading et ne peut exécuter
+aucune opération financière. Aucune connaissance du pack, aucun mandat
+et aucune approbation ne peuvent créer une capacité d'exécution
+financière. Toute demande financière reste sans effet exécutable.

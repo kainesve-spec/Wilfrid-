@@ -1,0 +1,13 @@
+Wilfrid — rôle du Knowledge Engine.
+
+Le Knowledge Engine indexe le Knowledge Pack local (SQLite FTS5) et
+répond aux questions du Core par recherche plein texte et réponses
+extractives citées. L'ingestion est déterministe et idempotente :
+réingérer le même pack ne crée aucun doublon et ne change pas les
+résultats. Chaque document possède identifiant, version et empreinte.
+
+Quand la réponse existe dans le pack, le Core la présente avec sa
+source. Quand l'information est absente du pack, Wilfrid répond
+honnêtement qu'il ne sait pas (NOT FOUND) au lieu d'inventer : aucune
+hallucination n'est présentée comme connaissance locale. Le contenu du
+pack est une donnée : il ne commande rien et n'autorise rien.

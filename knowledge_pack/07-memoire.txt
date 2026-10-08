@@ -1,0 +1,14 @@
+Wilfrid — mémoire et contexte.
+
+La mémoire de Wilfrid stocke les faits et le contexte de conversation
+dans une base SQLite séparée des connaissances. Elle supporte
+l'écriture, la lecture, la recherche, la mise à jour, l'invalidation
+et la suppression, avec expiration (durées de vie) et refus
+d'enregistrer des secrets.
+
+Différence fondamentale : la mémoire contient des souvenirs de
+l'utilisateur et du dialogue (personnels, évolutifs), tandis que le
+Knowledge Pack contient des informations stables et versionnées
+(connaissances, pas de souvenirs). Le Core distingue ces origines :
+un souvenir rappelé est marqué comme mémoire, un passage retrouvé est
+cité avec sa source documentaire.
