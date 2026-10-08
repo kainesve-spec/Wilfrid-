@@ -176,6 +176,7 @@ class WilfridRuntime:
         """Un tour texte via la boucle existante. Runtime RUNNING requis."""
         if self.state != "RUNNING":
             return False, "etat-inattendu:" + self.state
+        from core.cognitive.intent_router import route
         from core.cognitive.need_search import answer_search
         from core.loop.live import submit_turn
 
@@ -186,8 +187,8 @@ class WilfridRuntime:
 
         self._live, result = submit_turn(
             self._live, self._gate, text, now=now, source="text",
-            search_fn=_search, memory=self._memory, memorize=True,
-            session_id=self._live.id)
+            search_fn=_search, router_fn=route, memory=self._memory,
+            memorize=True, session_id=self._live.id)
         self.turn_count += 1
         return True, result
 

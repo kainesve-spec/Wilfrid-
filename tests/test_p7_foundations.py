@@ -151,12 +151,12 @@ def test_no_b2_capability_produces_effect(tmp_path):
                      "catalog.py", "resolver.py", "reader.py", "writer.py",
                      "notify.py", "invoke.py", "audit.py",
                      "coherence.py", "summary.py", "status.py",
-                     "approval_gate.py", "mandate.py"}, names - {"__init__.py", "types.py", "errors.py",
+                     "approval_gate.py", "mandate.py", "tools.py"}, names - {"__init__.py", "types.py", "errors.py",
                      "registry.py", "journal.py", "lifecycle.py", "governor.py",
                      "catalog.py", "resolver.py", "reader.py", "writer.py",
                      "notify.py", "invoke.py", "audit.py",
                      "coherence.py", "summary.py", "status.py",
-                     "approval_gate.py", "mandate.py"}
+                     "approval_gate.py", "mandate.py", "tools.py"}
     before = sorted(p.name for p in tmp_path.iterdir())
     req = _req()
     G.decide(req, None, 1000.0, False)
