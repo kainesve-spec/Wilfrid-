@@ -24,6 +24,24 @@ Aucune ressource distante : page/APK autonomes, runtime local,
 voix/STT/mémoire locaux. Seules les capacités Internet explicites
 restent indisponibles sans réseau.
 
+## Sphère flottante (overlay natif)
+
+`BubbleService` : bulle `SphereView` (Canvas : halo, sphère, noyau,
+anneaux, yeux, bouche) via `TYPE_APPLICATION_OVERLAY`, déplaçable au
+doigt (seuil anti-tap accidentel), tap → `MainActivity`, états sync
+toutes les 2 s depuis `/snapshot` (sans moteur : OFFLINE honnête),
+notification persistante, arrêt destructeur propre (vue retirée,
+threads coupés). Sans permission : guide vers réglages, appli
+utilisable seule.
+
+## Autonomie moteur
+
+`EngineStarter` : intent `RUN_COMMAND` vers Termux:API (`~/.termux/
+boot/wilfrid.sh` à créer côté appareil : `python3 ~/Wilfrid/wilfrid.py
+--app`) ; résultat honnête (`demande-envoyee`, `termux-api-absent`,
+`permission-refusee`) vérifiable par `/snapshot`. Sans Termux:API :
+démarrage manuel documenté.
+
 ## Build
 
 GitHub Actions (`.github/workflows/android.yml`) : JDK 17 + Gradle 8.7
