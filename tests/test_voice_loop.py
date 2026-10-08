@@ -308,6 +308,67 @@ def test_aucun_thread_residuel():
     assert after <= before
 
 
+def test_concurrence_turn_once_refuse():
+    import threading
+    import time
+    release = threading.Event()
+    entered = threading.Event()
+
+    def slow_capture():
+        entered.set()
+        release.wait(timeout=10.0)
+        return (_pcm(), 16000)
+
+    loop = VoiceLoop(FakeRuntime(), capture_fn=slow_capture,
+                     stt_fn=_stt_ok(), max_turns=0,
+                     synth_fn=lambda text: b"WAV",
+                     play_fn=lambda audio: (True, "joue"))
+    worker = threading.Thread(target=loop.turn_once, daemon=True)
+    worker.start()
+    assert entered.wait(timeout=10.0)
+    second = loop.turn_once(_pcm())
+    assert second.stage == "concurrence"
+    release.set()
+    worker.join(timeout=10.0)
+    assert loop.state == "LISTENING"
+
+
+def test_stop_pendant_synthese_sans_lecture():
+    import threading
+    entered = threading.Event()
+    release = threading.Event()
+    played = []
+
+    def slow_synth(text):
+        entered.set()
+        release.wait(timeout=10.0)
+        return b"WAV"
+
+    def spy_play(audio):
+        played.append(audio)
+        return True, "joue"
+
+    loop = VoiceLoop(FakeRuntime(), capture_fn=lambda: (_pcm(), 16000),
+                     stt_fn=_stt_ok(), synth_fn=slow_synth,
+                     play_fn=spy_play, max_turns=0)
+    worker = threading.Thread(target=loop.turn_once, args=(_pcm(),),
+                              daemon=True)
+    worker.start()
+    assert entered.wait(timeout=10.0)
+    loop.stop()
+    release.set()
+    worker.join(timeout=10.0)
+    assert played == []
+
+
+def test_redemarrage_apres_erreur():
+    loop = VoiceLoop(FakeRuntime(), capture_fn=lambda: (_pcm(), 16000),
+                     stt_fn=_stt_ok(), max_turns=1)
+    loop.state = "ERROR"
+    done = loop.run()
+    assert done["etat"] == "STOPPED" and done["tours"] == 1
+
+
 def test_l_sans_android_ni_elevenlabs():
     src = Path("core/voice/voice_loop.py").read_text(encoding="utf-8")
     lowered = src.lower()

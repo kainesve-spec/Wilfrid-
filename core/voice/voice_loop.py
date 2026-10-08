@@ -63,6 +63,8 @@ class VoiceLoop:
         self._wake_factory = wake_factory
         self._wake: Any = None
         self._run_lock = threading.Lock()
+        self._turn_guard = threading.Lock()
+        self._in_turn = False
 
     # ---------------------------------------------------------- défauts réels
     def _stt(self) -> Any:
@@ -155,7 +157,26 @@ class VoiceLoop:
 
     def turn_once(self, pcm: Any = None,
                   sample_rate: int = 16000) -> VoiceTurnReport:
-        """Un tour complet : capture/STT → Core → Pierre → lecture."""
+        """Un tour, protégé contre les appels concurrents (un seul tour)."""
+        with self._turn_guard:
+            if self._in_turn:
+                return VoiceTurnReport(stage="concurrence",
+                                       core="tour-deja-actif")
+            self._in_turn = True
+        try:
+            return self._do_turn(pcm, sample_rate)
+        finally:
+            with self._turn_guard:
+                self._in_turn = False
+
+    def _do_turn(self, pcm: Any = None,
+                 sample_rate: int = 16000) -> VoiceTurnReport:
+        """Corps d'un tour complet : capture/STT → Core → Pierre → lecture.
+
+        Note d'arrêt : la capture bloquante est bornée (≤10 s) ; un stop
+        demandé pendant la capture prend effet juste après (arrêt
+        différé borné, sans TTS ni lecture).
+        """
         report = VoiceTurnReport(stage="capture")
         if self._stop_event.is_set():
             report.stage = "arret"
@@ -232,6 +253,8 @@ class VoiceLoop:
             report.tts = str(exc)[:60]
             self.state = "LISTENING"
             return report
+        if self._aborted(report):
+            return report
         try:
             played = self._play()(bytes(audio))
             if isinstance(played, tuple):
@@ -258,21 +281,27 @@ class VoiceLoop:
                         "raison": "etat-inattendu"}
             self.state = "LISTENING"
             self._stop_event.clear()
-            while not self._stop_event.is_set():
-                if self.max_turns and self.turns >= self.max_turns:
-                    break
-                heard, why = self.listen_once()
-                if self._stop_event.is_set():
-                    break
-                if not heard:
-                    self.reports.append(VoiceTurnReport(
-                        stage="attente-" + why))
-                    if self.max_turns:
-                        self.turns += 1
-                    continue
-                report = self.turn_once()
-                self.reports.append(report)
-                self.turns += 1
+            with self._turn_guard:
+                self._in_turn = True
+            try:
+                while not self._stop_event.is_set():
+                    if self.max_turns and self.turns >= self.max_turns:
+                        break
+                    heard, why = self.listen_once()
+                    if self._stop_event.is_set():
+                        break
+                    if not heard:
+                        self.reports.append(VoiceTurnReport(
+                            stage="attente-" + why))
+                        if self.max_turns:
+                            self.turns += 1
+                        continue
+                    report = self._do_turn()
+                    self.reports.append(report)
+                    self.turns += 1
+            finally:
+                with self._turn_guard:
+                    self._in_turn = False
             self.state = "STOPPED"
             return {"tours": self.turns, "etat": self.state,
                     "raison": "arret-explicite"}
