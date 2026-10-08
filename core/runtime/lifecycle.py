@@ -52,6 +52,8 @@ class WilfridRuntime:
     _kstore: Any = field(default=None, repr=False)
     _journal: Any = field(default=None, repr=False)
     _started: bool = field(default=False, repr=False)
+    _missions: Any = field(default_factory=dict, repr=False)
+    _mission_params: Any = field(default_factory=dict, repr=False)
 
     def _move(self, target: str, reason: str = "") -> Tuple[bool, str]:
         if target not in _TRANSITIONS.get(self.state, ()):  # pragma: no cover
@@ -222,6 +224,91 @@ class WilfridRuntime:
                 setattr(self, attr, None)
         self._live = None
         self._gate = None
+        try:
+            self._missions = {}
+            self._mission_params = {}
+        except Exception:
+            pass
+
+    def submit_mission(self, spec: Any) -> Tuple[bool, str]:
+        """Enregistre une mission explicite (aucune exécution)."""
+        if self.state not in ("READY", "RUNNING"):
+            return False, "etat-inattendu:" + self.state
+        if not isinstance(spec, dict):
+            return False, "spec-invalide"
+        try:
+            from core.mission.mission import create_mission
+            ok, mission = create_mission(
+                mission_id=spec.get("id", ""),
+                objective=spec.get("objective", ""),
+                context=str(spec.get("context", "")),
+                tasks=spec.get("tasks", ()),
+                allowed_capabilities=spec.get("allowed_capabilities", ()),
+                provenance="operateur")
+        except Exception:
+            return False, "creation-impossible"
+        if not ok:
+            return False, str(mission)[:80]
+        self._missions[mission.id] = mission
+        try:
+            params = {}
+            for spec in spec.get("tasks", ()):
+                if isinstance(spec, dict) and isinstance(
+                        spec.get("id"), str):
+                    task_params = spec.get("params", {})
+                    if isinstance(task_params, dict):
+                        params[spec["id"]] = {
+                            str(k): v for k, v in task_params.items()}
+            self._mission_params[mission.id] = params
+        except Exception:
+            pass
+        return True, mission.id
+
+    def list_missions(self) -> List[Tuple[str, str]]:
+        """Inventaire (id, état), ordre stable."""
+        try:
+            items = list(self._missions.items())
+        except Exception:
+            return []
+        return sorted((mid, getattr(m, "state", "?")) for mid, m in items)
+
+    def get_mission(self, mission_id: Any) -> Any:
+        """Mission par id exact, `None` si inconnue."""
+        try:
+            return self._missions.get(mission_id) \
+                if isinstance(mission_id, str) else None
+        except Exception:
+            return None
+
+    def run_mission(self, mission_id: Any, *,
+                    decisions: Any = None,
+                    tool_params: Any = None,
+                    now: Any = 0.0) -> Tuple[bool, Any]:
+        """Avance une mission (décisions humaines explicites uniquement)."""
+        if self.state not in ("READY", "RUNNING"):
+            return False, "etat-inattendu:" + self.state
+        mission = self.get_mission(mission_id)
+        if mission is None:
+            return False, "mission-introuvable"
+        try:
+            from core.mission.execution import execute_mission
+            from core.mission.mission import transition_mission
+            if getattr(mission, "state", "") == "CREATED":
+                ok, mission = transition_mission(mission, "ACTIVE")
+                if not ok:
+                    return False, str(mission)[:80]
+                self._missions[mission.id] = mission
+            updated, report = execute_mission(
+                mission, gate=self._gate, journal=self._journal, now=now,
+                session_id=self.config.session_id,
+                decisions=decisions if isinstance(decisions, dict) else {},
+                tool_params=dict(
+                    self._mission_params.get(mission.id, {})),
+                request_id="run-%s" % mission.id)
+            self._missions[updated.id] = updated
+            return True, report
+        except Exception:
+            return False, "execution-impossible"
 
 
 def create_runtime(config: Any = None, *,

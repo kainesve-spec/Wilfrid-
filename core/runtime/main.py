@@ -113,6 +113,15 @@ def run(argv: Optional[List[str]] = None) -> int:
             text = line.strip()
             if not text:
                 break
+            try:
+                from core.runtime.operator import handle_command
+                handled, output = handle_command(
+                    runtime, text, now=float(turns))
+            except Exception:
+                handled, output = False, ""
+            if handled:
+                print("Wilfrid: %s" % output)
+                continue
             done, result = runtime.run_turn(text)
             if not done:
                 print("WILFRID ERROR: %s" % result, file=sys.stderr)
