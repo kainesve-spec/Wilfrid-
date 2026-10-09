@@ -101,7 +101,7 @@ def test_entrees_invalides(tmp_path):
 def test_serveur_app_bout_en_bout(tmp_path):
     import urllib.request
     runtime, app = _app(tmp_path)
-    server = VisualServer(app=app)
+    server = VisualServer(app=app, port=0)
     try:
         ok, _ = server.start()
         assert ok is True
@@ -148,3 +148,28 @@ def test_app_sans_autorite():
         assert "sk-" not in src, name
         assert "approve" not in lowered or "approbations" in lowered, name
     assert "mediaDevices" in PAGE_CHAT
+
+
+def test_snapshot_fraicheur_definie(tmp_path):
+    runtime, app = _app(tmp_path)
+    try:
+        code, payload, _ = app.handle("/snapshot", b"")
+        assert code == 200
+        data = json.loads(payload.decode("utf-8"))
+        assert data["fraicheur"].strip() != ""
+        assert "undefined" not in json.dumps(data)
+        assert isinstance(data["age_s"], (int, float))
+    finally:
+        runtime.stop()
+
+
+def test_png_requete_bloque_cache(tmp_path):
+    runtime, app = _app(tmp_path)
+    try:
+        for path in ("/png", "/png?tick=123456", "/png?t=1&t=2"):
+            code, payload, ctype = app.handle(path, b"")
+            assert code == 200, path
+            assert payload[:8] == b"\x89PNG\r\n\x1a\n"
+            assert ctype == "image/png"
+    finally:
+        runtime.stop()

@@ -53,7 +53,7 @@ class _Handler(BaseHTTPRequestHandler):
         app = getattr(type(self), "app", None)
         if app is not None:
             try:
-                code, payload, ctype = app.handle(self.path, body)
+                code, payload, ctype = app.handle(self.path.split('?', 1)[0] if isinstance(self.path, str) else '', body)
             except Exception:
                 code, payload, ctype = 500, b"erreur-application", \
                     "text/plain"
@@ -71,7 +71,8 @@ class _Handler(BaseHTTPRequestHandler):
             self.send_response(405)
             self.end_headers()
             return
-        if self.path not in ("/snapshot", "/png", "/health", "/page"):
+        path = self.path.split("?", 1)[0] if isinstance(self.path, str) else ""
+        if path not in ("/snapshot", "/png", "/health", "/page"):
             self.send_response(404)
             self.end_headers()
             return
@@ -81,24 +82,24 @@ class _Handler(BaseHTTPRequestHandler):
             self.end_headers()
             return
         try:
-            kind, payload, ctype = provider(self.path)
+            kind, payload, ctype = provider(path)
         except Exception:
             self.send_response(500)
             self.end_headers()
             return
-        if self.path == "/snapshot" and kind != "snapshot":
+        if path == "/snapshot" and kind != "snapshot":
             self.send_response(404)
             self.end_headers()
             return
-        if self.path == "/png" and kind != "png":
+        if path == "/png" and kind != "png":
             self.send_response(404)
             self.end_headers()
             return
-        if self.path == "/page" and kind != "page":
+        if path == "/page" and kind != "page":
             self.send_response(404)
             self.end_headers()
             return
-        if self.path == "/health":
+        if path == "/health":
             payload, ctype = b'{"status": "ok"}', "application/json"
         body = payload if isinstance(payload, bytes) else b""
         try:

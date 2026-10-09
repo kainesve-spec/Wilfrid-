@@ -90,24 +90,36 @@ class WilfridApp:
     def handle(self, path: str, body: bytes = b""
                ) -> Tuple[int, bytes, str]:
         """Route une requête (GET/POST déjà distingués par l'appelant)."""
-        if path == "/" or path == "/chat":
+        route = path.split("?", 1)[0] if isinstance(path, str) else ""
+        if route == "/" or route == "/chat":
             return 200, PAGE_CHAT.encode("utf-8"), \
                 "text/html; charset=utf-8"
-        if path == "/snapshot":
+        if route == "/snapshot":
+            import time as _time
             data = self.hook.snapshot()
+            try:
+                age = max(0.0, _time.time()
+                          - float(data.get("horodatage", 0.0)))
+            except (TypeError, ValueError):
+                age = -1.0
+            fraicheur = "HORODATAGE INVALIDE" if age < 0 else (
+                "à jour (%ds)" % int(age) if age <= 30.0
+                else "PÉRIMÉ (%ds)" % int(age))
             public = {"etat": data.get("etat", "INCONNU"),
                       "mode": data.get("mode", ""),
                       "horodatage": data.get("horodatage", 0.0),
+                      "age_s": age,
+                      "fraicheur": fraicheur,
                       "raison": data.get("raison", "")}
             return 200, json.dumps(public,
                                    ensure_ascii=False).encode("utf-8"), \
                 "application/json"
-        if path == "/png":
+        if route == "/png":
             try:
                 return 200, self.hook.png(), "image/png"
             except Exception:
                 return 500, b"rendu-impossible", "text/plain"
-        if path == "/page":
+        if route == "/page":
             from core.visual.page import page_html
             data = self.hook.snapshot()
             public = {"etat": data.get("etat", "INCONNU"),
@@ -115,9 +127,9 @@ class WilfridApp:
                       "raison": data.get("raison", "")}
             return 200, page_html(public).encode("utf-8"), \
                 "text/html; charset=utf-8"
-        if path == "/api/chat":
+        if route == "/api/chat":
             return self._chat(body)
-        if path == "/api/voice":
+        if route == "/api/voice":
             return self._voice(body)
         return 404, b"inconnu", "text/plain"
 
