@@ -56,7 +56,6 @@ public class SphereView extends View {
         canvas.drawCircle(cx, cy, radius * 1.25f, paint);
 
         RadialGradient sphere = new RadialGradient(
-                cx, cy - radius * 0.2f, radius * 0.1f,
                 cx, cy, radius,
                 new int[]{Color.rgb(140, 190, 255), Color.rgb(40, 90, 220),
                         Color.rgb(10, 20, 60)},
