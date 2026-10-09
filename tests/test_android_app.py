@@ -41,7 +41,7 @@ def test_configuration_valide():
 
 def test_activite_sans_pont_autorite():
     src = _read("app/src/main/java/org/wilfrid/app/MainActivity.java")
-    assert "addJavascriptInterface" not in src
+    assert "JavascriptInterface" not in src
     assert "127.0.0.1" in src
     assert "shouldOverrideUrlLoading" in src
     assert "localhost" in src
@@ -51,6 +51,15 @@ def test_activite_sans_pont_autorite():
     assert "taios" not in lowered
     assert "approve" not in lowered
     assert "elevenlabs" not in lowered
+
+
+def test_micro_webview_autorise_explicitement():
+    src = _read("app/src/main/java/org/wilfrid/app/MainActivity.java")
+    assert "setWebChromeClient" in src
+    assert "onPermissionRequest" in src
+    assert "RESOURCE_AUDIO_CAPTURE" in src
+    assert "request.grant" in src
+    assert "request.deny" in src
 
 
 def test_overlay_natif():

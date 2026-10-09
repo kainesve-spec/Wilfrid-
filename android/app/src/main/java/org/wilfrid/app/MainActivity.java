@@ -7,6 +7,8 @@ import android.content.pm.PackageManager;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.os.Bundle;
+import android.webkit.PermissionRequest;
+import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -38,6 +40,31 @@ public class MainActivity extends Activity {
         settings.setDomStorageEnabled(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
         // Aucun pont natif : pas d'autorité côté interface.
+        // Micro WebView : getUserMedia exige l'accord explicite de la
+        // WebView (RESOURCE_AUDIO_CAPTURE), en plus de la permission
+        // Android RECORD_AUDIO. Sans ceci, l'écoute reste muette.
+        web.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onPermissionRequest(PermissionRequest request) {
+                String[] wanted = request.getResources();
+                boolean audio = false;
+                for (String name : wanted) {
+                    if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(
+                            name)) {
+                        audio = true;
+                    }
+                }
+                boolean granted = checkSelfPermission(
+                        Manifest.permission.RECORD_AUDIO)
+                        == PackageManager.PERMISSION_GRANTED;
+                if (audio && granted) {
+                    request.grant(new String[]{
+                            PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+                } else {
+                    request.deny();
+                }
+            }
+        });
         web.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view,
